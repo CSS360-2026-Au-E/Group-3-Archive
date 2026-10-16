@@ -1,3 +1,28 @@
+# Group 3 - Archive
+
+## Project Overview
+For this project, we are developing a Discord bot that reads chat messages and uses a locally hosted LLM to identify and categorize topics being talking about within a Discord server.
+
+## Planned Features
+- Read recent messages from Discord channels.
+- Categorize discussion topics using a local LLM.
+- Provide a summary of the main topics.
+
+## Project Status
+We are currently in the planning and setup phase.
+
+- [x] Create group GitHub repository
+- [x] Set up Discord servers
+- [x] Decide on initial bot concept
+- [ ] Implement Discord bot features
+- [ ] Integrate local LLM
+- [ ] Test and deploy the bot
+
+
+
+<details>
+<summary>Old info from template</summary>
+  
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=542440024)
 
 # Javascript Discord Welcome MemeBot with GitHub Codespaces
@@ -74,5 +99,6 @@ Visit the generated url from the previous step and choose the server that you wa
 Once the bot is added it will appear on your Discord server in offline mode.
 
 You can now run the code in the repository using the command line by typing the command `npm start`. 
+</details>
 
 
