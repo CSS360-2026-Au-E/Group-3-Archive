@@ -13,6 +13,9 @@ const client = new Client({
   partials: [User, Message, GuildMember, ThreadMember],
 });
 
+const registerMessageLogger = require("./messageLogger");
+registerMessageLogger(client, { logDir: "logs", splitByChannel: true });
+
 client.events = new Collection();
 
 loadEvents(client, path.join(__dirname, "events"));
