@@ -70,7 +70,7 @@ function filePathFor(message, logDir, splitByChannel) {
 module.exports = function registerMessageLogger(client, options = {}) {
   const {
     logDir = "logs",
-    splitByChannel = false,
+    splitByChannel = true,
     includeBots = true, // set false to skip messages from bots (including this one)
   } = options;
 

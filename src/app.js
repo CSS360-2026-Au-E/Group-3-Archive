@@ -14,7 +14,7 @@ const client = new Client({
 });
 
 const registerMessageLogger = require("./messageLogger");
-registerMessageLogger(client, { logDir: "logs", splitByChannel: true });
+registerMessageLogger(client, { logDir: "logs"});
 
 client.events = new Collection();
 
