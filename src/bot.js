@@ -13,6 +13,15 @@ const client = new Client({
   partials: [User, Message, GuildMember, ThreadMember],
 });
 
+// Load messageLogger.js
+const registerMessageLogger = require("./messageLogger");
+// Load logCommand.js
+const registerLogCommand = require("./logCommand");
+// Register message logger system
+registerMessageLogger(client, { logDir: "logs"});
+// Register logger commands
+registerLogCommand(client, { logDir: "logs"});
+
 client.events = new Collection();
 
 loadEvents(client, path.join(__dirname, "events"));
