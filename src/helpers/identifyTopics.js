@@ -1,3 +1,4 @@
+
 import axios from "axios";
 
 export default async function identifyTopics(messages) {
@@ -13,16 +14,16 @@ export default async function identifyTopics(messages) {
     .slice(0, 12000);
 
   const response = await axios.post(
-    process.env.OLLAMA_URL || "http://localhost:11434/api/chat",
+    "http://localhost:11434/api/chat",
     {
-      model: process.env.OLLAMA_MODEL || "qwen2.5:3b",
+      model: "qwen2.5:3b",
       stream: false,
       format: "json",
       messages: [
         {
           role: "system",
-          content: `Identify up to three main discussion topics in a Discord conversation.
-Return JSON in this exact format: {"topics":["topic one","topic two"]}.
+          content: `Identify up to three main discussion topics in this Discord conversation.
+Return JSON in this format: {"topics":["topic one","topic two"]}.
 Use short descriptive topic names.
 Group related messages together.
 Ignore greetings and meaningless chatter.
