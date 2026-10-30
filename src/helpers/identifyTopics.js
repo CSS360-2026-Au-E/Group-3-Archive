@@ -53,3 +53,4 @@ Return {"topics":[]} if there are no meaningful topics.`,
     .filter(Boolean)
     .slice(0, 3);
 }
+export { default as identifyTopics } from "./identifyTopics";
