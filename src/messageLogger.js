@@ -46,13 +46,9 @@ function formatMessage(message) {
   let text = (message.content || "").replace(/\n/g, "\n    ");
 
   const extras = [];
-  if (message.attachments.size) {
-    extras.push(...message.attachments.map((a) => `[attachment] ${a.name} ${a.url}`));
-  }
+  if (message.attachments.size) extras.push(...message.attachments.map((a) => `[attachment] ${a.name} ${a.url}`));
   if (message.embeds.length) extras.push(`[${message.embeds.length} embed(s)]`);
-  if (message.stickers.size) {
-    extras.push(...message.stickers.map((s) => `[sticker] ${s.name}`));
-  }
+  if (message.stickers.size) extras.push(...message.stickers.map((s) => `[sticker] ${s.name}`));
   if (extras.length) text += (text ? "\n    " : "") + extras.join("\n    ");
 
   return `[${dateStamp(d)} ${timeStamp(d)}] [${where}] ${author}: ${text}\n`;
@@ -68,16 +64,13 @@ function filePathFor(message, logDir, splitByChannel) {
 }
 
 module.exports = function registerMessageLogger(client, options = {}) {
-  const {
-    logDir = "logs",
-    splitByChannel = true,
-    includeBots = true, // set false to skip messages from bots (including this one)
-  } = options;
+  const {logDir = "logs", splitByChannel = true, includeBots = true,} = options;
 
   // Writes are chained so lines always land in the order messages arrived
   let queue = Promise.resolve();
   const createdDirs = new Set();
 
+  // Run after client sends message
   client.on(Events.MessageCreate, (message) => {
     if (!includeBots && message.author.bot) return;
 
@@ -86,16 +79,18 @@ module.exports = function registerMessageLogger(client, options = {}) {
 
     queue = queue
       .then(async () => {
+		// Check if text file exists
         const dir = path.dirname(filePath);
+		// Create text file and directory if missing
         if (!createdDirs.has(dir)) {
           await fs.promises.mkdir(dir, { recursive: true });
           createdDirs.add(dir);
         }
         await fs.promises.appendFile(filePath, line, "utf8");
-      })
-      .catch((err) => console.error("Message log write failed:", err));
+      }).catch((err) => console.error("Message log write failed:", err));
   });
-
+	
+  // Console setup message
   console.log(
     `Message logger on: ${path.resolve(logDir)} (${splitByChannel ? "per channel" : "all channels"}, one file per day)`
   );
