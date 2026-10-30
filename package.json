@@ -1,12 +1,12 @@
 {
-  "name": "memebot_discord",
+  "name": "archivebot_discord",
   "version": "1.0.0",
-  "description": "this is a demo project for teaching how to build a discord bot",
+  "description": "This bot archives chat messages.",
   "scripts": {
     "build": "rm -rf build && esbuild src/*.js src/**/*.js --platform=node --format=cjs  --outdir=build --outbase=src",
-    "start": "npm run build && node -r dotenv/config build/app.js",
+    "start": "npm run build && node -r dotenv/config build/bot.js",
     "dev": "nodemon",
-    "prod": "node build/app.js",
+    "prod": "node build/bot.js",
     "test": "mocha -r esbuild-runner/register ./tests/*.spec.js --exit"
   },
   "keywords": [
@@ -15,7 +15,7 @@
     "javascript",
     "nodejs"
   ],
-  "author": "Shubham Jaiswal <@shubhamjaiswal27>",
+  "author": "esoh2@uw.edu",
   "license": "MIT",
   "dependencies": {
     "ascii-table": "^0.0.9",
