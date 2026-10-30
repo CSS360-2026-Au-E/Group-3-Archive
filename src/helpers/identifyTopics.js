@@ -1,78 +1,55 @@
 import axios from "axios";
 
 export default async function identifyTopics(messages) {
-  if (!messages || messages.length === 0) {
-    return [];
-  }
+  if (!messages?.length) return [];
 
   const conversation = messages
     .map((message) => {
-      const username =
-        message.author?.username ?? "Unknown";
-
-      return `${username}: ${message.content}`;
+      const username = message.author?.username ?? "Unknown";
+      return `${username}: ${message.content ?? ""}`;
     })
-    .join("\n");
-
-  const prompt = `
-Identify up to three main discussion topics in this Discord conversation.
-
-Rules:
-- Use short, descriptive topic names.
-- Group related messages together.
-- Prioritize important and frequently discussed subjects.
-- Ignore greetings and meaningless chatter.
-- Do not invent topics.
-- Return an empty array if no meaningful topics exist.
-
-Return valid JSON only in this format:
-{
-  "topics": ["Topic 1", "Topic 2", "Topic 3"]
-}
-
-Conversation:
-${conversation}
-`;
+    .filter((line) => !line.endsWith(": "))
+    .join("\n")
+    .slice(0, 12000);
 
   const response = await axios.post(
-    process.env.QWEN_API_URL,
+    process.env.OLLAMA_URL || "http://localhost:11434/api/chat",
     {
-      model: process.env.QWEN_MODEL || "qwen-turbo",
+      model: process.env.OLLAMA_MODEL || "qwen2.5:3b",
+      stream: false,
+      format: "json",
       messages: [
         {
+          role: "system",
+          content: `Identify up to three main discussion topics in a Discord conversation.
+Return JSON in this exact format: {"topics":["topic one","topic two"]}.
+Use short descriptive topic names.
+Group related messages together.
+Ignore greetings and meaningless chatter.
+Do not invent topics.
+Return {"topics":[]} if there are no meaningful topics.`,
+        },
+        {
           role: "user",
-          content: prompt,
+          content: conversation,
         },
       ],
-      temperature: 0.2,
-      response_format: {
-        type: "json_object",
+      options: {
+        temperature: 0.2,
       },
     },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.QWEN_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-    }
+    { timeout: 60000 }
   );
 
-  const content = response.data.choices[0].message.content;
-  const result = JSON.parse(content);
+  const result = JSON.parse(response.data.message.content);
 
-  if (
-    !result ||
-    !Array.isArray(result.topics) ||
-    !result.topics.every(
-      (topic) => typeof topic === "string"
-    )
-  ) {
+  if (!Array.isArray(result.topics)) {
     throw new Error("Qwen returned an invalid topics array.");
   }
 
   return result.topics
+    .filter((topic) => typeof topic === "string")
     .map((topic) => topic.trim())
     .filter(Boolean)
     .slice(0, 3);
 }
-
