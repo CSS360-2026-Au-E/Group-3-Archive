@@ -1,4 +1,3 @@
-
 import axios from "axios";
 
 export default async function identifyTopics(messages) {
@@ -14,21 +13,25 @@ export default async function identifyTopics(messages) {
     .slice(0, 12000);
 
   const response = await axios.post(
-    "http://localhost:11434/api/chat",
+    process.env.OLLAMA_URL,
     {
-      model: "qwen2.5:3b",
+      model: process.env.OLLAMA_MODEL,
       stream: false,
       format: "json",
       messages: [
         {
           role: "system",
-          content: `Identify up to three main discussion topics in this Discord conversation.
-Return JSON in this format: {"topics":["topic one","topic two"]}.
-Use short descriptive topic names.
-Group related messages together.
-Ignore greetings and meaningless chatter.
-Do not invent topics.
-Return {"topics":[]} if there are no meaningful topics.`,
+          content: `You are a Discord conversation topic identifier.
+
+Read the conversation carefully and identify its main discussion topics.
+
+Return between 1 and 3 topics when meaningful topics exist.
+Combine closely related subjects into one topic.
+Ignore greetings, jokes, and meaningless chatter.
+Do not return an empty array if the conversation contains clear topics.
+
+Return ONLY valid JSON in this exact format:
+{"topics":["Math homework","Minecraft gaming","Group project planning"]}`,
         },
         {
           role: "user",
@@ -41,6 +44,8 @@ Return {"topics":[]} if there are no meaningful topics.`,
     },
     { timeout: 60000 }
   );
+
+  console.log("Raw Qwen response:", response.data.message.content);
 
   const result = JSON.parse(response.data.message.content);
 
