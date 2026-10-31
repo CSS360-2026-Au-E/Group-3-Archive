@@ -1,3 +1,4 @@
+import { EmbedBuilder } from "discord.js";
 import { analyzeConversation } from "../helpers";
 
 const TESTING_CHANNEL_ID = "1564703878434263040";
@@ -53,15 +54,33 @@ const event = {
         message.channel.id
       );
       lastDeadlineSignatureByChannel.set(message.channel.id, signature);
+      const hasNewDeadlines =
+        deadlines.length > 0 && signature !== previousSignature;
 
-      if (deadlines.length && signature !== previousSignature) {
-        await message.reply({
-          content: formatDeadlineMessage(deadlines),
-          allowedMentions: { parse: [], repliedUser: false },
-        });
-      }
+      const topicDescription = topics.length
+        ? topics.map((topic, index) => `${index + 1}. **${topic}**`).join("\n")
+        : "No meaningful topics were identified.";
+
+      const embed = new EmbedBuilder()
+        .setColor(0x5865F2)
+        .setTitle("Conversation Analysis")
+        .setDescription(
+          hasNewDeadlines
+            ? `${topicDescription}\n\n${formatDeadlineMessage(deadlines)}`
+            : topicDescription
+        )
+        .setFooter({ text: "Analyzed the latest 20 messages" })
+        .setTimestamp();
+
+      await message.reply({
+        embeds: [embed],
+        allowedMentions: { parse: [], repliedUser: false },
+      });
     } catch (error) {
       console.error("Conversation analysis failed:", error.message);
+      await message
+        .reply("I could not analyze the conversation right now.")
+        .catch(() => {});
     }
   },
 };

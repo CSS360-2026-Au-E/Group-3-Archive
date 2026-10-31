@@ -16,7 +16,7 @@ export function parseConversationAnalysis(content) {
 
   const topics = result.topics
     .filter((topic) => typeof topic === "string")
-    .map((topic) => topic.trim())
+    .map((topic) => topic.trim().slice(0, 200))
     .filter(Boolean)
     .slice(0, MAX_TOPICS);
 
