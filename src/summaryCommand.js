@@ -42,35 +42,45 @@ function resolveChannel(message, arg) {
   ) || null;
 }
 
-function splitText(text, limit = 1024) {
-  const chunks = [];
-  let remaining = text.trim();
+function cleanCell(value) {
+  return String(value || "")
+    .replace(/\|/g, "\\|")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160) || "—";
+}
 
-  while (remaining.length) {
-    if (remaining.length <= limit) {
-      chunks.push(remaining);
-      break;
+function splitRows(rows, limit = 900) {
+  const groups = [];
+  let current = [];
+  let size = 0;
+
+  for (const row of rows) {
+    if (size + row.length > limit && current.length) {
+      groups.push(current);
+      current = [];
+      size = 0;
     }
-
-    let splitAt = remaining.lastIndexOf("\n", limit);
-    if (splitAt < limit / 2) splitAt = remaining.lastIndexOf(" ", limit);
-    if (splitAt < limit / 2) splitAt = limit;
-
-    chunks.push(remaining.slice(0, splitAt).trim());
-    remaining = remaining.slice(splitAt).trim();
+    current.push(row);
+    size += row.length;
   }
 
-  return chunks;
+  if (current.length) groups.push(current);
+  return groups;
 }
 
 async function summarizeConversation(transcript) {
   const response = await axios.post(process.env.OLLAMA_URL, {
     model: process.env.OLLAMA_MODEL,
     stream: false,
+    format: "json",
     messages: [
       {
         role: "system",
-        content: `Summarize the Discord conversation log. Include the main topics, key decisions, important questions, and any action items. Do not invent details. Keep the summary concise and easy to read.`,
+        content: `Analyze the Discord conversation log and organize what happened by topic.
+Return ONLY valid JSON in this exact format:
+{"topics":[{"topic":"Topic name","summary":"What was discussed","outcome":"Decision, action item, question, or result"}]}
+Use 3 to 8 topics. Do not invent details. Keep each summary concise. Use an em dash in the outcome if no clear outcome exists.`,
       },
       {
         role: "user",
@@ -80,7 +90,20 @@ async function summarizeConversation(transcript) {
     options: { temperature: 0.2 },
   }, { timeout: 60000 });
 
-  return response.data?.message?.content?.trim() || "No summary could be generated.";
+  const content = response.data?.message?.content?.trim();
+  if (!content) throw new Error("Ollama returned an empty summary.");
+
+  const result = JSON.parse(content);
+  if (!Array.isArray(result.topics)) throw new Error("Ollama returned an invalid topic table.");
+
+  return result.topics
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      topic: cleanCell(item.topic),
+      summary: cleanCell(item.summary),
+      outcome: cleanCell(item.outcome),
+    }))
+    .slice(0, 8);
 }
 
 module.exports = function registerSummaryCommand(client, options = {}) {
@@ -134,19 +157,33 @@ module.exports = function registerSummaryCommand(client, options = {}) {
       if (!transcript) return message.reply(`No messages in #${channel.name} on ${date}.`);
 
       await message.channel.sendTyping();
-      const summary = await summarizeConversation(transcript);
-      const chunks = splitText(summary).slice(0, 5);
+      const topics = await summarizeConversation(transcript);
 
-      const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setTitle(`Conversation Summary — #${channel.name}`)
-        .setTimestamp();
+      if (!topics.length) {
+        return message.reply("No meaningful topics were found in this log.");
+      }
 
-      chunks.forEach((chunk, index) => {
-        embed.addFields({ name: index === 0 ? `Summary — ${date}` : `Continued`, value: chunk });
-      });
+      const header = "| Topic | Summary | Outcome |\n|---|---|---|";
+      const rows = topics.map((item) =>
+        `| ${item.topic} | ${item.summary} | ${item.outcome} |`
+      );
+      const rowGroups = splitRows(rows.map((row) => `${row}\n`));
+      const embeds = [];
 
-      return message.reply({ embeds: [embed] });
+      for (let index = 0; index < Math.min(rowGroups.length, 10); index += 1) {
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(index === 0
+            ? `Conversation Summary — #${channel.name}`
+            : `Conversation Summary — Continued (${index + 1})`)
+          .setDescription(`\`\`\`text\n${header}\n${rowGroups[index].join("")}\n\`\`\``)
+          .setTimestamp();
+
+        if (index === 0) embed.setFooter({ text: `Log date: ${date}` });
+        embeds.push(embed);
+      }
+
+      return message.reply({ embeds });
     } catch (error) {
       console.error("Summary command failed:", error.message);
       return message.reply("Something went wrong summarizing that log.").catch(() => {});

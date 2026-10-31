@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "This bot archives chat messages.",
   "scripts": {
-    "build": "rm -rf build && esbuild src/*.js src/**/*.js --platform=node --format=cjs  --outdir=build --outbase=src",
+    "build": "node build.js",
     "start": "npm run build && node -r dotenv/config build/bot.js",
     "dev": "nodemon",
     "prod": "node build/bot.js",

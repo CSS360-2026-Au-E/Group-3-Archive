@@ -33,7 +33,7 @@ We have finished setting up the team environment (GitHub repo, Kanban board, Dis
 
 ## Commands
 
-- `!log YYYY-MM-DD [#channel]` — prints a saved channel log for a date; use `today` or `yesterday` instead of a date
-- `!summary YYYY-MM-DD [#channel]` — summarizes a saved channel log and prints the result in a Discord embed; use `today` or `yesterday` instead of a date
+- `!log YYYY-MM-DD [#channel]` — prints a saved channel log as Discord embeds for a date; use `today` or `yesterday` instead of a date
+- `!summary YYYY-MM-DD [#channel]` — summarizes a saved channel log into a topic table in Discord embeds; use `today` or `yesterday` instead of a date
 
 ---

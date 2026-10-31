@@ -4,7 +4,7 @@
 //   !log 2026-10-29 #general     -> log for #general (mention or plain name)
 //   !log today #general          -> "today" and "yesterday" also work
 //
-// Short logs are printed in chat; longer ones are sent as a .txt attachment.
+// Logs are returned as Discord embeds. Long logs are split across multiple embeds.
 //
 // Usage (in bot.js) - pass the SAME options to both so they look in the same place:
 //   const registerMessageLogger = require("./messageLogger");
@@ -15,10 +15,10 @@
 
 const fs = require("fs");
 const path = require("path");
-const { Events, AttachmentBuilder, PermissionFlagsBits } = require("discord.js");
+const { Events, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 
-const CHAT_LIMIT = 1800; // print in chat below this many characters, attach above
-const UPLOAD_LIMIT = 10 * 1024 * 1024; // Discord's default upload limit (10 MB)
+const EMBED_TEXT_LIMIT = 3800;
+const MAX_EMBEDS = 10;
 
 // Must match safeName() in messageLogger.js so folder names line up
 function safeName(name) {
@@ -55,10 +55,31 @@ function parseDate(input) {
 // Find the channel from a mention (<#123>), a name (general / #general), or default to the current one
 function resolveChannel(message, arg) {
   if (!arg) return message.channel;
-  const mention = arg.match(/^<#(\d+)>$/);
-  if (mention) return message.guild.channels.cache.get(mention[1]) || null;
+  const mention = arg.match(/^<(?:#|@)(\d+)>$/);
+  if (mention && arg.startsWith("<#")) return message.guild.channels.cache.get(mention[1]) || null;
   const name = arg.replace(/^#/, "").toLowerCase();
   return message.guild.channels.cache.find((c) => c.name?.toLowerCase() === name) || null;
+}
+
+function splitText(text, limit) {
+  const chunks = [];
+  let remaining = text.trim();
+
+  while (remaining.length) {
+    if (remaining.length <= limit) {
+      chunks.push(remaining);
+      break;
+    }
+
+    let splitAt = remaining.lastIndexOf("\n", limit);
+    if (splitAt < limit / 2) splitAt = remaining.lastIndexOf(" ", limit);
+    if (splitAt < limit / 2) splitAt = limit;
+
+    chunks.push(remaining.slice(0, splitAt).trim());
+    remaining = remaining.slice(splitAt).trim();
+  }
+
+  return chunks;
 }
 
 // Single-file mode: keep only one channel's lines, plus their indented continuation lines
@@ -132,21 +153,30 @@ module.exports = function registerLogCommand(client, options = {}) {
       text = text.trimEnd();
       if (!text) return message.reply(`No messages in #${channel.name} on ${date}.`);
 
-      const header = `Log for #${channel.name} on ${date}:`;
+      const chunks = splitText(text, EMBED_TEXT_LIMIT);
+      const visibleChunks = chunks.slice(0, MAX_EMBEDS);
+      const embeds = visibleChunks.map((chunk, index) => {
+        const safeText = chunk.replace(/```/g, "`\u200b``");
+        const embed = new EmbedBuilder()
+          .setColor(0x5865F2)
+          .setTitle(index === 0
+            ? `Conversation Log — #${channel.name}`
+            : `Conversation Log — Continued (${index + 1}/${visibleChunks.length})`)
+          .setDescription(`\`\`\`\n${safeText}\n\`\`\``)
+          .setTimestamp();
 
-      // Short: print in a code block (break up any ``` so the block doesn't close early)
-      if (text.length <= CHAT_LIMIT) {
-        const safeText = text.replace(/```/g, "`\u200b``");
-        return message.reply(`${header}\n\`\`\`\n${safeText}\n\`\`\``);
+        if (index === 0) embed.setFooter({ text: `Log date: ${date}` });
+        return embed;
+      });
+
+      if (chunks.length > MAX_EMBEDS) {
+        return message.reply({
+          content: `The log was too long to display completely (${chunks.length - MAX_EMBEDS} additional embed section(s) omitted).`,
+          embeds,
+        });
       }
 
-      // Long: send as a .txt attachment
-      const buffer = Buffer.from(text, "utf8");
-      if (buffer.length > UPLOAD_LIMIT) {
-        return message.reply(`That log is too large to upload (${(buffer.length / 1048576).toFixed(1)} MB).`);
-      }
-      const file = new AttachmentBuilder(buffer, { name: `${safeName(channel.name)}_${date}.txt` });
-      return message.reply({ content: header, files: [file] });
+      return message.reply({ embeds });
     } catch (err) {
       console.error("Log command failed:", err);
       message.reply("Something went wrong reading that log.").catch(() => {});
