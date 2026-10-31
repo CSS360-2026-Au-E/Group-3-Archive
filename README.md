@@ -8,9 +8,8 @@ Archive is a student team building a Discord bot as our quarter-long software en
 
 ## 📌 Project Status
 
-**Current phase:** Planning / Building Core Features
+**Current phase:** Release 1.0
 
-We have finished setting up the team environment (GitHub repo, Kanban board, Discord servers). 
 
 ### Commands
 
