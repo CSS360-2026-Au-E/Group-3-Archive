@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Partials, Collection } from "discord.js";
-import { loadEvents } from "./helpers";
+import { loadEvents, loadCommands } from "./helpers";
 import path from "path";
 
 const TOKEN = process.env.TOKEN;
@@ -14,7 +14,9 @@ const client = new Client({
 });
 
 client.events = new Collection();
+client.commands = new Collection();
 
+loadCommands(client, path.join(__dirname, "commands"));
 loadEvents(client, path.join(__dirname, "events"));
 
 client.login(TOKEN);
