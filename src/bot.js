@@ -17,10 +17,13 @@ const client = new Client({
 const registerMessageLogger = require("./messageLogger");
 // Load logCommand.js
 const registerLogCommand = require("./logCommand");
+// Load summaryCommand.js
+const registerSummaryCommand = require("./summaryCommand");
 // Register message logger system
 registerMessageLogger(client, { logDir: "logs"});
 // Register logger commands
 registerLogCommand(client, { logDir: "logs"});
+registerSummaryCommand(client, { logDir: "logs"});
 
 client.events = new Collection();
 
