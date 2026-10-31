@@ -8,15 +8,32 @@ Archive is a student team building a Discord bot as our quarter-long software en
 
 ## 📌 Project Status
 
-**Current phase:** Developing Core Bot Functions
+**Current phase:** Release 1.0
 
-We have finished setting up the team environment (GitHub repo, Kanban board, Discord servers). We are now planning and implementing core bot features
 
-| Concept | Description | Status |
-|---|---|---|
-| 📝 **Summary Bot** | Summarizes past conversations in a channel so members can catch up on what they missed without scrolling. | Selected |
+### Commands
 
----
+The bot has two text commands:
+
+| Command | Function |
+|---|---|
+| `!log YYYY-MM-DD [#channel]` | Reads the saved message log for the specified date and channel, then displays it in Discord embed(s). |
+| `!log today [#channel]` | Displays today's log for the specified channel or the channel where the command was sent. |
+| `!log yesterday [#channel]` | Displays yesterday's log. |
+| `!summary YYYY-MM-DD [#channel]` | Reads the saved log and uses Ollama to organize what happened into topics. Displays a formatted topic table in Discord embed(s). |
+| `!summary today [#channel]` | Summarizes today's log. |
+| `!summary yesterday [#channel]` | Summarizes yesterday's log. |
+
+Examples:
+
+- `!log today`
+- `!log 2026-10-29 #general`
+- `!summary yesterday`
+- `!summary 2026-10-29 #general`
+
+Commands require the **Manage Messages** permission. Logs omit `.logs` that don't exist or return a channel/date-not-found response.
+
+The implementations are in `logCommand.js` and `summaryCommand.js`.
 
 ## Roadmap
 
@@ -26,14 +43,7 @@ We have finished setting up the team environment (GitHub repo, Kanban board, Dis
 - [x] Brainstorm bot ideas
 - [x] Select final bot concept
 - [x] Define initial user stories and story points
-- [ ] Build first working feature
-- [ ] Deploy to group server
-
----
-
-## Commands
-
-- `!log YYYY-MM-DD [#channel]` — prints a saved channel log as Discord embeds for a date; use `today` or `yesterday` instead of a date
-- `!summary YYYY-MM-DD [#channel]` — summarizes a saved channel log into a topic table in Discord embeds; use `today` or `yesterday` instead of a date
+- [x] Build first working feature
+- [x] Deploy to group server
 
 ---
