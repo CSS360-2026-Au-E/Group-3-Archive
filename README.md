@@ -30,6 +30,16 @@ Commands require the **Manage Messages** permission. Logs omit `.logs` that don'
 
 The implementations are in `logCommand.js` and `summaryCommand.js`.
 
+### Conversation analysis
+
+In the configured testing channel, the bot analyzes the 20 most recent messages
+with the configured Ollama model. It identifies up to three discussion topics and
+extracts explicit deadlines connected to specific tasks. Newly detected deadlines
+are posted in the channel; an unchanged deadline list is not posted repeatedly.
+
+Relative deadlines such as “tomorrow” and “by Friday” are resolved using the bot's
+local date when possible.
+
 ## Roadmap
 
 - [x] Choose team name
