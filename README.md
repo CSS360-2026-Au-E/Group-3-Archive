@@ -6,9 +6,64 @@ Archive is a student team building a Discord bot as our quarter-long software en
 
 ---
 
+## Local setup (Discord bot + Ollama)
+
+This project uses one laptop as both the Discord bot host and the Ollama host.
+The bot is online only while that laptop is awake, connected to the internet,
+and running both processes below. No Docker or cloud server is required.
+
+### One-time setup
+
+1. Install Node.js and [Ollama](https://ollama.com/).
+2. Clone the repository and open the project folder in VS Code.
+3. Install the Node dependencies:
+
+   ```powershell
+   npm install
+   ```
+
+4. Download the configured model:
+
+   ```powershell
+   ollama pull qwen2.5:3b
+   ```
+
+5. Copy `.env.example` to `.env` and replace the values with the
+   Discord application token, server ID, and channel ID.
+
+Discord IDs can be copied after enabling **Developer Mode** in Discord under
+**User Settings > Advanced**. Right-click the server or channel and select
+**Copy ID**.
+
+### Start the bot
+
+
+```powershell
+ollama serve
+```
+
+```powershell
+npm start
+```
+
+### Quick checks
+
+Before a demo, verify the setup with:
+
+```powershell
+ollama list
+npm test
+```
+
+If Discord commands work but summaries fail, Ollama is usually not running or
+the configured model has not been downloaded. If the bot does not appear
+online at all, check `TOKEN` and confirm that `npm start` is still running.
+
+---
+
 ## 📌 Project Status
 
-**Current phase:** Release 1.0
+**Current phase:** Release 1.5
 
 
 ### Commands

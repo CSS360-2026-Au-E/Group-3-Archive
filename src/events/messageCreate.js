@@ -1,7 +1,7 @@
 import { EmbedBuilder } from "discord.js";
 import { analyzeConversation } from "../helpers";
 
-const TESTING_CHANNEL_ID = "1564703878434263040";
+const TESTING_CHANNEL_ID = process.env.TESTING_CHANNEL_ID;
 const lastDeadlineSignatureByChannel = new Map();
 
 function escapeDiscordMarkdown(value) {
@@ -28,7 +28,8 @@ const event = {
     if (message.author.bot) return;
     console.log("New message received:", message.content);
 
-    // Only analyze messages in the testing channel
+    // Only analyze messages in the configured testing channel.
+    // Keeping this in .env lets each teammate use their own Discord server.
     if (message.channel.id !== TESTING_CHANNEL_ID) return;
 
     try {
