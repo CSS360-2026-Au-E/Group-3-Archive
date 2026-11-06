@@ -1,4 +1,7 @@
 node_modules
 .env
 build
+# Local data and test files
 logs/
+chat.txt
+checkOllama.js
