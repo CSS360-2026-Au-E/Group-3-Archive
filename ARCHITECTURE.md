@@ -115,6 +115,106 @@ flowchart TD
 2. Put reusable logic (fetching, AI calls, formatting) in `src/services/` so it can be tested on its own.
 3. Restart the bot. `loadCommands.js` picks up the file, and `ready.js` registers it with Discord (instantly if `GUILD_ID` is set).
 
+
+## Network Architecture - Spencer
+
+## Overview
+
+Our Discord bot uses a client-server architecture. Discord acts as the external platform where users interact with the bot, while a local laptop hosts the Node.js application and Ollama AI server.
+
+The Node.js application uses discord.js to communicate with Discord over the internet. It receives messages and commands, processes them, and sends responses back to Discord. The bot also communicates with Ollama through a local connection on the same laptop. Ollama runs the Qwen 2.5 3B model, which analyzes recent Discord messages to identify discussion topics and deadlines.
+
+The bot also uses local files to store message logs, which can be retrieved using commands.
+
+## Network Diagram
+
+The network diagram shows how the different components communicate with each other. Discord users interact with Discord's servers, which communicate with the Node.js bot over the internet. The bot then communicates with the locally hosted Ollama server and accesses local message log files.
+
+```mermaid
+flowchart TB
+    U["Discord Users"]
+    D["Discord Servers"]
+    I["Internet"]
+
+    subgraph LAPTOP["Local Laptop"]
+        N["Node.js Discord Bot"]
+        O["Ollama Server"]
+        AI["Qwen 2.5 3B Model"]
+        F[("Local Message Log Files")]
+
+        N <-->|"Local HTTP API"| O
+        O --> AI
+        N <-->|"Read / Write"| F
+    end
+
+    U <-->|"Messages / Responses"| D
+    D <-->|"Gateway WebSocket / Discord API"| I
+    I <-->|"Internet Connection"| N
+```
+
+### Network Communication
+
+- **Discord:** Provides the platform where users send messages and interact with the bot.
+- **Internet:** Connects Discord's servers to the locally hosted bot.
+- **Node.js:** Processes incoming Discord events and commands and determines how the bot responds.
+- **discord.js:** Handles communication between the Node.js application and Discord.
+- **Ollama:** Provides a locally hosted API that allows the bot to communicate with the AI model.
+- **Qwen 2.5 3B:** Analyzes recent Discord messages to identify topics and deadlines.
+- **Local Message Log Files:** Store messages that the bot can retrieve when users request previous conversations.
+
+## Data Flow Diagram
+
+The data flow diagram illustrates how information moves through the bot when users interact with it. Messages are received through Discord, processed by Node.js, and stored or sent to Ollama when AI analysis is needed.
+
+```mermaid
+flowchart TD
+    A["Discord User"]
+    B["Discord Server"]
+    C["Node.js Bot"]
+    D[("Message Log Files")]
+    E["Ollama AI Server"]
+    F["Qwen 2.5 3B"]
+    G["Discord Channel"]
+
+    A -->|"Messages / Commands"| B
+    B -->|"Message Events"| C
+    C <-->|"Read / Write Logs"| D
+    C -->|"Recent Messages"| E
+    E -->|"Model Input"| F
+    F -->|"Topics and Deadlines"| E
+    E -->|"Analysis Results"| C
+    C -->|"Responses / Summaries"| G
+    G --> A
+```
+
+### Data Flow Explanation
+
+1. A user sends a message or command in a Discord channel.
+2. Discord delivers the message event to the Node.js bot.
+3. The bot processes the event and can save or retrieve messages from local log files.
+4. When AI analysis is needed, the bot sends recent messages to Ollama.
+5. Ollama passes the information to the Qwen 2.5 3B model for analysis.
+6. The model returns its analysis, including identified topics and deadlines.
+7. The Node.js bot processes the results and sends the appropriate response to Discord.
+
+## Hosting and Deployment
+
+The bot and Ollama server run locally on a laptop rather than on a cloud server. Node.js runs the bot application, while Ollama hosts the AI model.
+
+npm is used to install the project's dependencies and run the application. The bot uses discord.js to connect to Discord and Ollama's local API to communicate with the AI model.
+
+Because the application is hosted locally, the laptop must remain powered on, connected to the internet, and running the bot for it to be available to Discord users.
+
+## Architectural Considerations
+
+| Component | Advantages | Limitations |
+|---|---|---|
+| Local Ollama Server | Does not require an external AI API. | Requires local computing resources. |
+| Local Hosting | Avoids cloud hosting costs. | Bot becomes unavailable when the laptop is offline. |
+| Node.js | Handles asynchronous events and Discord commands. | Requires Node.js and project dependencies. |
+| Local Message Storage | Allows previous messages to be retrieved. | Logs are stored on the host machine. |
+
+
 ## Startup Architecture (`npm start`) - Emma part
 
 `npm start` first builds the source code, then starts ArchiveBot using settings from `.env`.
