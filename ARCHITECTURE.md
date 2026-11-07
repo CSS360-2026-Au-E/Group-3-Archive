@@ -178,6 +178,8 @@ ArchiveBot reads configuration at runtime rather than compiling it into `build/`
 | `OLLAMA_MODEL` | Names the Ollama model, currently `qwen2.5:3b`. |
 | Ollama | A separate local service. `npm start` does not launch it. The bot can start without Ollama, but requests fail until `ollama serve` is running and the model is installed. |
 
+---
+
 ## Data Architecture
 
 Archive Bot has two message-processing pipelines that run side by side:
@@ -186,9 +188,7 @@ Archive Bot has two message-processing pipelines that run side by side:
 2. **Recent-message analysis** reads the latest messages in a test channel, sends them to the local Ollama model, and replies with the topics and deadlines it finds.
 Both listen to Discord's `messageCreate` event, but they don't share code or data.
  
----
- 
-## 1. Message logging system
+### 1. Message logging system
  
 Every message the bot can see is formatted into one line of text and appended to a daily file for its channel.
  
@@ -227,9 +227,8 @@ flowchart TD
     I can book the room
 ```
  
----
  
-## 2. Recent-message analysis system
+### 2. Recent-message analysis system
  
 Every human message in the configured test channel triggers an analysis of that channel's latest 20 messages.
  
