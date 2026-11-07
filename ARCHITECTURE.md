@@ -115,9 +115,9 @@ flowchart TD
 2. Put reusable logic (fetching, AI calls, formatting) in `src/services/` so it can be tested on its own.
 3. Restart the bot. `loadCommands.js` picks up the file, and `ready.js` registers it with Discord (instantly if `GUILD_ID` is set).
 
-## Startup Architecture (`npm start`)
+## Startup Architecture (`npm start`) - Emma part
 
-`npm start` is the normal local entry point for ArchiveBot. It is responsible for two separate phases: producing runnable CommonJS files from the source tree and then starting the Discord client with configuration loaded from `.env`.
+`npm start` first builds the source code, then starts ArchiveBot using settings from `.env`.
 
 The command in `package.json` is:
 
@@ -125,7 +125,7 @@ The command in `package.json` is:
 npm run build && node -r dotenv/config build/bot.js
 ```
 
-The `&&` is an important boundary: Node starts the bot only if the build succeeds. This prevents the application from running an incomplete build after a compilation error.
+The `&&` is an important boundary. Node starts the bot only if the build succeeds. This prevents the application from running an incomplete build after a compilation error.
 
 ### Startup sequence
 
@@ -166,26 +166,14 @@ flowchart TD
 
 ### Configuration and external dependencies
 
-ArchiveBot reads configuration at runtime rather than compiling it into `build/`. Secrets therefore remain outside Git, and the same build can run with different Discord servers or Ollama models.
+ArchiveBot reads configuration at runtime rather than compiling it into `build/`. So, secrets remain outside Git, and the same build can run with different Discord servers or Ollama models.
 
-| Setting or service | Role during startup and operation |
+| Setting or service | Role |
 |---|---|
 | `TOKEN` | Required by `client.login()`; a missing or invalid token prevents the bot from connecting to Discord. |
 | `GUILD_ID` | Optional server ID used by `ready.js` for fast, server-specific slash-command registration. |
 | `CHANNEL_NAME` | Selects the channel used by the welcome-message feature. |
 | `TESTING_CHANNEL_ID` | Limits automatic topic and deadline analysis to the configured channel. |
-| `OLLAMA_URL` | HTTP endpoint used when a feature asks the local language model for an analysis or summary. |
+| `OLLAMA_URL` | HTTP endpoint used for ai model. |
 | `OLLAMA_MODEL` | Names the Ollama model, currently `qwen2.5:3b`. |
-| Discord | Required at startup because the bot must authenticate and maintain a gateway connection. |
-| Ollama | A separate local service; `npm start` does not launch it. The bot can start without Ollama, but AI-backed requests fail until `ollama serve` is running and the model is installed. |
-
-### Other lifecycle scripts
-
-| Command | Intended use | Architectural difference |
-|---|---|---|
-| `npm run build` | Compile only | Recreates `build/` but does not start a process or load `.env`. |
-| `npm start` | Normal local startup | Rebuilds, preloads `.env`, and runs the compiled entry point. |
-| `npm run prod` | Prebuilt or container startup | Runs `build/bot.js` without rebuilding or preloading `.env`; the environment must already be supplied by the host. |
-| `npm run dev` | Development watcher | Starts nodemon and watches `src/`; unlike `npm start`, the current script does not explicitly perform the build-and-run sequence. |
-
-The Dockerfile follows the same two-phase architecture in separate image stages. Its builder stage runs `npm run build`; the production stage copies only `build/`, installs production dependencies, and launches `npm run prod`. Runtime configuration and access to Ollama must be supplied by the deployment environment.
+| Ollama | A separate local service. `npm start` does not launch it. The bot can start without Ollama, but requests fail until `ollama serve` is running and the model is installed. |
