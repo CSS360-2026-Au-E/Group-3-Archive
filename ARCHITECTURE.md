@@ -287,6 +287,23 @@ Archive Bot has two message-processing pipelines that run side by side:
 1. **Message logging** saves every message to daily text files.
 2. **Recent-message analysis** reads the latest messages in a test channel, sends them to the local Ollama model, and replies with the topics and deadlines it finds.
 Both listen to Discord's `messageCreate` event, but they don't share code or data.
+
+## User Interaction Architecture — Vicky
+
+Users interact with ArchiveBot through Discord channels and commands. Discord delivers user messages and command interactions to the bot, which processes them and determines the appropriate response.
+
+Users can interact with the bot in two main ways:
+
+- **Messages:** When a user sends a message in the configured testing channel, the bot automatically analyzes recent channel messages using the local Qwen model to identify discussion topics and deadlines.
+- **Commands:** Users can use slash commands such as `/summarize` and prefix commands such as `!log` and `!summary` to request summaries or retrieve previously logged messages.
+
+The bot communicates results back to users through Discord channel messages, replies, and embeds. If an error occurs during processing, the bot can send an error response instead.
+
+### User Interaction Use Case Diagram
+
+The use case diagram illustrates the main ways users interact with ArchiveBot, including sending messages, using commands, receiving responses, and the bot's interaction with the Qwen AI service.
+
+![User Interaction Use Case Diagram](docs/images/user-interaction.png)
  
 ### 1. Message logging system
  
