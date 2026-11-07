@@ -177,3 +177,97 @@ ArchiveBot reads configuration at runtime rather than compiling it into `build/`
 | `OLLAMA_URL` | HTTP endpoint used for ai model. |
 | `OLLAMA_MODEL` | Names the Ollama model, currently `qwen2.5:3b`. |
 | Ollama | A separate local service. `npm start` does not launch it. The bot can start without Ollama, but requests fail until `ollama serve` is running and the model is installed. |
+
+---
+
+## Data Architecture
+
+Archive Bot has two message-processing pipelines that run side by side:
+ 
+1. **Message logging** saves every message to daily text files.
+2. **Recent-message analysis** reads the latest messages in a test channel, sends them to the local Ollama model, and replies with the topics and deadlines it finds.
+Both listen to Discord's `messageCreate` event, but they don't share code or data.
+ 
+### 1. Message logging system
+ 
+Every message the bot can see is formatted into one line of text and appended to a daily file for its channel.
+ 
+```mermaid
+flowchart TD
+    A["Discord message<br/>(any channel the bot can see)"] --> B
+ 
+    subgraph LOG["Logging · messageLogger.js"]
+        B["messageCreate listener"] --> C{"Bot message and<br/>includeBots is false?"}
+        C -- yes --> X["Skip"]
+    end
+ 
+    C -- no --> D
+ 
+    subgraph FMT["Formatting · formatMessage()"]
+        D["Timestamp<br/>YYYY-MM-DD HH:MM:SS (local time)"] --> E["Location and author<br/>[Server #channel] user"]
+        E --> F["Message text<br/>extra lines indented 4 spaces"]
+        F --> G["Extras<br/>attachments, embeds, stickers"]
+    end
+ 
+    G --> H
+ 
+    subgraph STORE["Storage · filePathFor() + write queue"]
+        H["Build file path<br/>safeName(), dateStamp()"] --> I["Write queue<br/>keeps lines in arrival order"]
+        I --> J["Create folder if missing<br/>mkdir recursive"]
+        J --> K["appendFile"]
+    end
+ 
+    K --> L[("logs/server/channel/YYYY-MM-DD.txt")]
+```
+ 
+**Example log line**
+ 
+```
+[2026-11-05 14:03:22] [My Server #general] alice: are we still on for Friday?
+    I can book the room
+```
+ 
+ 
+### 2. Recent-message analysis system
+ 
+Every human message in the configured test channel triggers an analysis of that channel's latest 20 messages.
+ 
+```mermaid
+flowchart TD
+    A["Discord message"] --> B
+ 
+    subgraph READ["Read previous messages · events/messageCreate.js"]
+        B{"Bot message, or not in<br/>TESTING_CHANNEL_ID?"} -- yes --> X["Ignore"]
+        B -- no --> C["Fetch last 20 messages"]
+        C --> D["Reverse to oldest first"]
+    end
+ 
+    D --> E
+ 
+    subgraph FMT["Format · helpers/identifyTopics.js"]
+        E["Build transcript<br/>username: message"] --> F["Drop empty messages"]
+        F --> G["Limit to 12,000 characters"]
+    end
+ 
+    G --> H
+ 
+    subgraph AI["Input to Ollama"]
+        H["POST OLLAMA_URL<br/>model: OLLAMA_MODEL, JSON format,<br/>temperature 0.2"] --> I["System prompt<br/>today's date, find 1-3 topics<br/>and task deadlines"]
+        I --> J(["Ollama model"])
+    end
+ 
+    J --> K
+ 
+    subgraph OUT["Data output"]
+        K["parseConversationAnalysis()<br/>validate, trim, cap at<br/>3 topics and 10 deadlines"] --> L{"Deadlines changed<br/>since last reply?"}
+        L -- yes --> M["Embed: topics + deadlines"]
+        L -- no --> N["Embed: topics only"]
+    end
+ 
+    M --> R["Reply in channel<br/>(pings blocked)"]
+    N --> R
+    J -. "error" .-> E2["Reply: could not analyze"]
+```
+ 
+---
+ 
