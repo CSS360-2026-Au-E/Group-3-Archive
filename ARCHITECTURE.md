@@ -114,3 +114,66 @@ flowchart TD
 1. Create a file in `src/commands/` that default-exports `{ data, execute }`, where `data` is a `SlashCommandBuilder`.
 2. Put reusable logic (fetching, AI calls, formatting) in `src/services/` so it can be tested on its own.
 3. Restart the bot. `loadCommands.js` picks up the file, and `ready.js` registers it with Discord (instantly if `GUILD_ID` is set).
+
+## Startup Architecture (`npm start`) - Emma part
+
+`npm start` first builds the source code, then starts ArchiveBot using settings from `.env`.
+
+The command in `package.json` is:
+
+```text
+npm run build && node -r dotenv/config build/bot.js
+```
+
+The `&&` is an important boundary. Node starts the bot only if the build succeeds. This prevents the application from running an incomplete build after a compilation error.
+
+### Startup sequence
+
+1. `npm start` invokes the `start` script in `package.json`.
+2. `npm run build` executes `node build.js`.
+3. `build.js` deletes the previous `build/` directory, recursively finds every JavaScript file under `src/`, and passes those files to esbuild.
+4. esbuild preserves the directory structure while translating the source modules into CommonJS files under `build/`. For example, `src/events/ready.js` becomes `build/events/ready.js`. CommonJS output is required because the runtime loaders use `require()` to discover commands and events by file path.
+5. If the build succeeds, Node preloads `dotenv/config`. This reads `.env` before `build/bot.js` accesses `process.env`.
+6. `build/bot.js` creates the Discord client, registers the logger and prefix-command modules, creates the command and event collections, and loads the compiled files in `build/commands/` and `build/events/`.
+7. `client.login(TOKEN)` authenticates with Discord and opens the gateway connection.
+8. When Discord emits `ready`, `ready.js` publishes the loaded slash-command definitions. With `GUILD_ID`, commands are registered to one server and update quickly; without it, they are registered globally.
+9. The Node process remains active and waits for Discord events. Stopping this process takes the bot offline.
+
+```mermaid
+flowchart TD
+  user["Developer runs npm start"] --> start["package.json: start script"]
+  start --> build["npm run build"]
+  build --> clean["build.js removes old build folder"]
+  clean --> scan["Find every JavaScript file under src"]
+  scan --> compile["esbuild outputs CommonJS files under build"]
+  compile --> built{"Build succeeded?"}
+  built -- No --> stop["Stop; bot is not started"]
+  built -- Yes --> env["Node preloads dotenv/config"]
+  env --> entry["Run build/bot.js"]
+  entry --> client["Create Discord client and collections"]
+  client --> direct["Register logger and prefix commands"]
+  client --> loaders["Load compiled slash commands and events"]
+  direct --> login["client.login with TOKEN"]
+  loaders --> login
+  login --> authenticated{"Discord authentication succeeds?"}
+  authenticated -- No --> offline["Startup fails; bot stays offline"]
+  authenticated -- Yes --> ready["ready event registers slash commands"]
+  ready --> online["Bot is online and waiting for events"]
+
+  ollama["Separate process: ollama serve"]
+  online -. "summary request" .-> ollama
+```
+
+### Configuration and external dependencies
+
+ArchiveBot reads configuration at runtime rather than compiling it into `build/`. So, secrets remain outside Git, and the same build can run with different Discord servers or Ollama models.
+
+| Setting or service | Role |
+|---|---|
+| `TOKEN` | Required by `client.login()`; a missing or invalid token prevents the bot from connecting to Discord. |
+| `GUILD_ID` | Optional server ID used by `ready.js` for fast, server-specific slash-command registration. |
+| `CHANNEL_NAME` | Selects the channel used by the welcome-message feature. |
+| `TESTING_CHANNEL_ID` | Limits automatic topic and deadline analysis to the configured channel. |
+| `OLLAMA_URL` | HTTP endpoint used for ai model. |
+| `OLLAMA_MODEL` | Names the Ollama model, currently `qwen2.5:3b`. |
+| Ollama | A separate local service. `npm start` does not launch it. The bot can start without Ollama, but requests fail until `ollama serve` is running and the model is installed. |
