@@ -1,10 +1,11 @@
 {
-  "name": "archivebot_discord",
+  "name": "archivebot",
   "version": "1.0.0",
   "description": "This bot archives chat messages.",
   "scripts": {
-    "build": "node build.js",
+    "build": "rm -rf build && esbuild src/*.js src/**/*.js --platform=node --format=cjs  --outdir=build --outbase=src",
     "start": "npm run build && node -r dotenv/config build/bot.js",
+	"deploy": "node src/deploy-commands.js",
     "dev": "nodemon",
     "prod": "node build/bot.js",
     "test": "mocha -r esbuild-runner/register ./tests/*.spec.js --exit"
@@ -15,7 +16,7 @@
     "javascript",
     "nodejs"
   ],
-  "author": "esoh2@uw.edu",
+  "author": "XXXX",
   "license": "MIT",
   "dependencies": {
     "ascii-table": "^0.0.9",
