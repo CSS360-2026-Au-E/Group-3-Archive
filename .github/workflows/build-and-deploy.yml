@@ -1,28 +1,73 @@
-name: Build and Push Docker Container
+name: CI and Docker CD
 
 on:
+  pull_request:
+    branches: [main, release]
   push:
-    branches:
-      - "release"
+    branches: [main, release]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  validate:
+    name: Build application
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Build and publish Docker image
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/setup-buildx-action@v3
+
+      - name: Generate image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/memebot:latest
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

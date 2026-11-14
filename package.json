@@ -3,12 +3,13 @@
   "version": "1.0.0",
   "description": "This bot archives chat messages.",
   "scripts": {
-    "build": "rm -rf build && esbuild src/*.js src/**/*.js --platform=node --format=cjs  --outdir=build --outbase=src",
+    "build": "node build.js",
     "start": "npm run build && node -r dotenv/config build/bot.js",
     "deploy": "node src/deploy-commands.js",
     "dev": "nodemon",
     "prod": "node build/bot.js",
-    "test": "mocha -r esbuild-runner/register ./tests/*.spec.js --exit"
+    "test": "mocha -r esbuild-runner/register ./tests/*.spec.js --exit",
+    "coverage": "c8 --all --include=src/**/*.js --reporter=text --reporter=html mocha ./tests/*.spec.js --exit"
   },
   "keywords": [
     "discord",
@@ -24,6 +25,7 @@
     "discord.js": "^14.5.0"
   },
   "devDependencies": {
+    "c8": "^12.0.0",
     "chai": "^4.3.6",
     "dotenv": "^16.0.2",
     "esbuild": "^0.15.9",

@@ -2,3 +2,9 @@ node_modules
 npm-debug.log
 build
 .devcontainer
+.git
+.github
+.env
+.env.*
+old_code
+logs
