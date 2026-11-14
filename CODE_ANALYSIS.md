@@ -210,7 +210,102 @@ User stories from this section: _(add links)_
 
 ## 4. Test coverage
 
-_To be filled in by the owner._
+Owner: Emma
+
+### 4.1 How I measured coverage
+
+I used **c8**, a coverage tool for Node.js. Node runs JavaScript with the
+**V8 JavaScript engine**, and V8 has built-in support for recording which code
+runs during a test. c8 collects that V8 data and turns it into an easier-to-read
+coverage report. It does not create or replace tests; it measures the code that
+the existing tests execute.
+
+I ran all five automated tests and measured them against every JavaScript file
+under `src/`. The `--all` setting is important because it includes production
+files that no test loaded and correctly reports them as 0%. Without it, those
+files would be left out and the overall percentage would look misleadingly
+high.
+
+The following command prints a summary in the terminal and creates a detailed
+HTML report in `coverage/`:
+
+```sh
+npm run coverage
+```
+
+The `coverage/` directory is ignored by Git because anyone can recreate it from
+the committed code and tests. c8 is saved as a development dependency, so every
+contributor can repeat the same measurement with the command above.
+
+### 4.2 Baseline results
+
+All five tests passed while V8 collected the coverage data: two logging tests
+and three property-based tests for `safeName()`.
+
+The four measurements mean:
+
+- **Statements:** how many individual instructions ran.
+- **Branches:** how many alternative paths, such as both sides of an `if`, ran.
+- **Functions:** how many functions were called.
+- **Lines:** how many lines containing executable code ran.
+
+| Scope | Statements | Branches | Functions | Lines |
+|---|---:|---:|---:|---:|
+| All production files | 22.51% | 44.44% | 60.00% | 22.51% |
+| `src/logsys/` | 87.80% | 50.00% | 93.75% | 87.80% |
+| `logStore.js` | 80.43% | 57.14% | 87.50% | 80.43% |
+| `logUtils.js` | 91.50% | 56.00% | 100.00% | 91.50% |
+| `messageLogger.js` | 100.00% | 31.57% | 100.00% | 100.00% |
+| `slashCommands.js` | 0.00% | 0.00% | 0.00% | 0.00% |
+| `ollama/summarizer.js` | 0.00% | 0.00% | 0.00% | 0.00% |
+
+The entry points, event handlers, and helper loaders also measured 0%. These
+numbers provide a starting point for improvement. A high percentage does not
+by itself prove that the code is correct; the tests still need useful
+assertions.
+
+### 4.3 Findings
+
+1. Most of the tested code is in `src/logsys/`. That folder has 87.80% line
+   coverage, while much of the rest of the bot is untested.
+2. Overall line coverage is 22.51% after including every production file.
+   Looking only at files loaded by the tests would hide this gap.
+3. `slashCommands.js` and `ollama/summarizer.js` both have 0% automated
+   coverage. These are important modules because they handle user commands and
+   generate the bot's summaries.
+4. `messageLogger.js` has 100% line coverage but only 31.57% branch coverage.
+   The tests execute every line, but they do not try every choice within those
+   lines. For example, they do not cover all combinations involving bot
+   messages, attachments, embeds, stickers, and write failures. This shows why
+   line coverage should not be considered by itself.
+
+### 4.4 Recommendations
+
+1. Add tests for the summary pipeline using a mocked Ollama HTTP client. Cover
+   valid summaries, malformed model output, request failures, timeouts, and
+   multi-part summaries without requiring a running model.
+2. Add tests for `/log`, `/clearlog`, and `/summary` using mocked Discord
+   interactions and injected log-store/summarizer dependencies. Include
+   permission checks, invalid input, confirmation, and error responses.
+3. Expand logging tests to exercise both sides of the remaining branches,
+   especially bot-message filtering and attachment/embed/sticker formatting.
+4. Run `npm run coverage` in CI and initially require coverage not to fall
+   below the measured baseline. Raise the threshold as the two uncovered core
+   modules receive tests.
+
+### 4.5 Limitations
+
+V8 coverage records which code ran, but it cannot tell whether a test made the
+right assertions or whether the result was correct. Percentages can also
+change when production code, tests, Node, or c8 changes. The manual Discord and
+Ollama smoke tests remain useful because they test the real system, but manual
+tests do not add to this automated V8 coverage report.
+
+### 4.6 User story
+
+- [Task #5 Emma: Add automated tests for the summary pipeline](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/63)
+  — addresses the 0% automated coverage of `summarizer.js` and supports the
+  planned summary-pipeline refactoring in issue #60.
 
 ---
 
@@ -595,8 +690,7 @@ Deployment setup and container run instructions are documented in
 | [Task #5 Noah: Separate channel logs by ID](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) | Threat I1, coupling C6 | Noah | Medium | Next bot version | [#45](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) |
 | [Task #5 Noah: Remove deleted messages from logs](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) | Threat R2 | Noah | Medium | Next bot version | [#46](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) |
 | [Task #5 Ethan: Stop injected text from becoming summary content](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) | S1(Prompt-Injection) | Ethan | Medium | Next bot version | [#57](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) |
-| [Task #5 Ethan: Describe image attachments in summaries](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) | S2(image-only messages) | Ethan | Low | Next bot version | [#58](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) || [Task #5 Emma: Make the build command work across platforms](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) | Technical debt TD1 | Emma | High | Current Task 5 pull request | [#59](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) |
+| [Task #5 Ethan: Describe image attachments in summaries](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) | S2(image-only messages) | Ethan | Low | Next bot version | [#58](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) |
 | [Task #5 Emma: Make the build command work across platforms](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) | Technical debt TD1 | Emma | High | Current Task 5 pull request | [#59](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) |
 | [Task #5 Emma: Separate the summary pipeline into focused modules](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60) | Code smell TD3 | Emma | Medium | Future development iteration | [#60](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60) |
-| [Task #5 Spencer: Recover from unexpected errors](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/54) | reliability / resilience | Spencer | Medium | Future development iteration | [#54](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/54) |
-| [Task #5 Spencer: Add custom error message when bot doesn't respond](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/53) | usability / error-messaging | Spencer | Medium | Future development iteration | [#53](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/53) |
+| [Task #5 Emma: Add automated tests for the summary pipeline](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/63) | Test coverage, Section 4 | Emma | High | Next bot version | [#63](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/63) |

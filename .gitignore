@@ -1,6 +1,7 @@
 node_modules
 .env
 build
+coverage/
 # Local data and test files
 logs/
 chat.txt
