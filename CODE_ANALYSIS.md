@@ -4,7 +4,7 @@ CSS 360 – Software Engineering | Group 3 – Archive | Autumn 2026
 
 ## 1. Technical debt and code smells
 
-Owner: Enkhjin
+Owner: Emma
 
 ### 1.1 Scope and method
 
