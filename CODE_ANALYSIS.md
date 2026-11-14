@@ -465,43 +465,71 @@ This testing found a real path-handling weakness that was also identified indepe
 
 These tests focus on `safeName()`. They do not prove that every possible file-system path or logging operation is secure. Additional tests should cover path collisions, channel names that sanitize to the same value, and the use of Discord IDs instead of names.
 
+---
 
 ## 7. Unit tests
 
-Owner: Vicky
+**Owner: Vicky**
 
 ### 7.1 What I tested
 
-I created automated tests in `tests/logging.smoke.spec.js` to check that the main logging operations work together.
+I created four unit tests in `tests/logUtils.unit.spec.js` to test individual functions in `src/logsys/logUtils.js`.
 
-The test uses Node.js temporary directories so it does not modify or delete the bot's actual log files. It uses an EventEmitter to simulate the Discord client's message event.
+These tests check date formatting, time formatting, date validation, and date range generation.
 
-These tests were first written as smoke tests, which is why the file name says "smoke". They call the logging modules directly and don't need the bot, Discord or Ollama, so they are reported here as unit tests. The manual smoke tests of the running bot are in section 8.
+I also created automated logging integration tests in `tests/logging.smoke.spec.js` to check that message logging, retrieval, and clearing work together.
+
+Checks that `dateStamp()` formats a date as `YYYY-MM-DD`.
+
+**Result:** Passed.
+
+The automated logging integration tests were originally named smoke tests, which is why the file is called `logging.smoke.spec.js`. They test how the logging modules work together by simulating Discord message events. They do not connect to a live Discord server or use Ollama. The manual smoke tests of the running bot are documented in Section 8.
 
 ### 7.2 Unit test cases
 
-| Test | What it checks | Result |
-|---|---|---|
-| Message logging and retrieval | Simulates a Discord message, triggers `messageLogger.js`, and retrieves the saved message using `logStore.js` | Passed |
-| Date range and clearing | Reads logs from two days, checks the combined message count, clears one day's log, and verifies that it is gone | Passed |
+**Test 2: Time formatting**
 
-The tests exercise the real logging and storage modules rather than replacing their main functionality with mocks.
+Checks that `timeStamp()` formats a time as `HH:MM:SS`.
+
+**Result:** Passed.
+
+**Test 3: Invalid date validation**
+
+Checks that `parseDate()` rejects an impossible calendar date such as `2026-02-30`.
+
+**Result:** Passed.
 
 ### 7.3 Results
 
-The tests passed when run with:
+**Result:** Passed.
 
-`npm test`
+**Test 4: Date range generation**
 
-The combined test suite reported:
+Checks that `getDateRange()` returns every date between the start and end dates, including both endpoints.
 
-- 2 unit tests passed.
-- 3 fuzz tests passed (section 6).
-- 5 tests passed in total.
+**Result:** Passed.
+
+### 7.3 Results
+
+I ran the complete test suite using `npm test`.
+
+The results were:
+- 4 unit tests passed.
+- 3 property-based fuzz tests passed (Section 6).
+- 2 automated logging integration tests passed.
+- 9 tests passed in total.
+- 0 failures.
 - 0 failures.
 
 ### 7.4 Limitations
 
+These unit tests cover selected functions in `logUtils.js`. They do not test every possible date input or every edge case. Additional tests could cover daylight-saving changes, invalid date ranges, and the maximum allowed date range.
+
+---
+
+## 8. Smoke test
+
+_To be filled in by the owner._
 The tests simulate a Discord message event. They do not connect to Discord, verify a live bot login, or test actual slash-command interactions. They also do not contact Ollama or verify AI summary generation.
 
 These areas are covered by the manual smoke tests in section 8.
@@ -689,8 +717,10 @@ Deployment setup and container run instructions are documented in
 |---|---|---|---|---|---|
 | [Task #5 Noah: Separate channel logs by ID](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) | Threat I1, coupling C6 | Noah | Medium | Next bot version | [#45](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) |
 | [Task #5 Noah: Remove deleted messages from logs](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) | Threat R2 | Noah | Medium | Next bot version | [#46](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) |
-| [Task #5 Ethan: Stop injected text from becoming summary content](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) | S1(Prompt-Injection) | Ethan | Medium | Next bot version | [#57](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) |
-| [Task #5 Ethan: Describe image attachments in summaries](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) | S2(image-only messages) | Ethan | Low | Next bot version | [#58](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) |
+| [Task #5 Vicky: Handle invalid server and channel names safely](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/49) | Section 6, unsafe input handling | Vicky | Medium | Next bot version | [#49](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/49) |
+| [Task #5 Vicky: Prevent directory traversal in log paths](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/50) | Section 6, path traversal | Vicky | High | Next bot version | [#50](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/50) |
+| [Task #5 Ethan: Stop injected text from becoming summary content](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) | S1 (Prompt injection) | Ethan | Medium | Next bot version | [#57](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) |
+| [Task #5 Ethan: Describe image attachments in summaries](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) | S2 (Image-only messages) | Ethan | Low | Next bot version | [#58](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) |
 | [Task #5 Emma: Make the build command work across platforms](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) | Technical debt TD1 | Emma | High | Current Task 5 pull request | [#59](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) |
 | [Task #5 Emma: Separate the summary pipeline into focused modules](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60) | Code smell TD3 | Emma | Medium | Future development iteration | [#60](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60) |
 | [Task #5 Emma: Add automated tests for the summary pipeline](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/63) | Test coverage, Section 4 | Emma | High | Next bot version | [#63](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/63) |
