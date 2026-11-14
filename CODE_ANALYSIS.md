@@ -319,11 +319,6 @@ All 16 test cases in the 3 unit tests passed, with 0 failures.
 
 ![npm test output showing 16 passing tests](images/unit-test-results.png)
 
-### 7.5 Not covered yet
-
-- `safeName("..")` returns `".."` unchanged. That allows the path traversal described in threat T1 (section 5). No test was added for it yet, because the fix (storing logs by server and channel ID) hasn't been made. A test should be added with the fix.
-- `logStore.js` (reading and clearing logs) and the parts of `summarizer.js` that don't need the model (`parseLog`, `allocateParts`, `normalizeSummary`) don't have unit tests yet. They would be good next candidates.
-
 ---
 
 ## 8. Smoke test
