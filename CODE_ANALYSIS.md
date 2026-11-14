@@ -523,3 +523,5 @@ Deployment setup and container run instructions are documented in
 |---|---|---|---|---|---|
 | [Task #5 Noah: Separate channel logs by ID](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) | Threat I1, coupling C6 | Noah | Medium | Next bot version | [#45](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) |
 | [Task #5 Noah: Remove deleted messages from logs](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) | Threat R2 | Noah | Medium | Next bot version | [#46](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) |
+| [Task #5 Ethan: Stop injected text from becoming summary content](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) | S1(Prompt-Injection) | Ethan | Medium | Next bot version | [#57](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/57) |
+| [Task #5 Ethan: Describe image attachments in summaries](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) | S2(image-only messages) | Ethan | Low | Next bot version | [#58](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/58) |
