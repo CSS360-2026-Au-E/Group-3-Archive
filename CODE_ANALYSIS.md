@@ -257,7 +257,48 @@ User stories from this section: _(add links)_
 
 ## 6. Fuzzing
 
-_To be filled in by the owner._
+
+Owner: Vicky
+
+### 6.1 What I looked at
+
+I used Fast-check, a JavaScript property-based testing library, to fuzz test `safeName()` in `src/logsys/logUtils.js`.
+
+This function sanitizes server and channel names before they are used as directory names by `messageLogger.js` and `logStore.js`. Since it helps construct file paths, unexpected input could cause errors or unsafe paths.
+
+I added Fast-check as a development dependency and created `tests/logUtils.spec.js`.
+
+### 6.2 Tests and findings
+
+I wrote three property-based tests:
+
+| Test | What it checks | Result |
+|---|---|---|
+| Non-empty output | `safeName()` always returns a non-empty string, even with unusual input | Passed after fix |
+| Unsafe characters | Filename characters such as `/`, `\`, `:`, and control characters are replaced | Passed |
+| Directory traversal | The input `..` must not be returned as a directory name | Passed after fix |
+
+The initial fuzz run found two problems:
+
+1. Fast-check found an object with a non-callable `toString` property that caused `String(name)` to throw a TypeError.
+2. The input `..` was returned unchanged. Since the result is used in `path.join()`, this could allow a path to escape its intended directory.
+
+I updated `safeName()` to catch string-conversion errors and return `"unknown"` for empty names, `"."`, and `".."`.
+
+### 6.3 Results
+
+After the fixes, all three fuzz tests passed.
+
+Command: `npm test`
+
+The final combined test run reported 5 passing tests and 0 failing tests.
+
+This testing found a real path-handling weakness that was also identified independently in the threat model as T1. The fix reduces the risk of directory traversal through server or channel names.
+
+### 6.4 Limitations
+
+These tests focus on `safeName()`. They do not prove that every possible file-system path or logging operation is secure. Additional tests should cover path collisions, channel names that sanitize to the same value, and the use of Discord IDs instead of names.
+
 
 ## 7. Unit tests
 
@@ -265,7 +306,43 @@ _To be filled in by the owner._
 
 ## 8. Smoke test
 
-_To be filled in by the owner._
+
+Owner: Vicky
+
+### 8.1 What I tested
+
+I created an automated smoke test in `tests/logging.smoke.spec.js` to check that the main logging operations work together.
+
+The test uses Node.js temporary directories so it does not modify or delete the bot's actual log files. It uses an EventEmitter to simulate the Discord client's message event.
+
+### 8.2 Smoke test cases
+
+| Test | What it checks | Result |
+|---|---|---|
+| Message logging and retrieval | Simulates a Discord message, triggers `messageLogger.js`, and retrieves the saved message using `logStore.js` | Passed |
+| Date range and clearing | Reads logs from two days, checks the combined message count, clears one day's log, and verifies that it is gone | Passed |
+
+The tests exercise the real logging and storage modules rather than replacing their main functionality with mocks.
+
+### 8.3 Results
+
+The tests passed when run with:
+
+`npm test`
+
+The combined test suite reported:
+
+- 2 smoke tests passed.
+- 3 fuzz tests passed.
+- 5 tests passed in total.
+- 0 failures.
+
+### 8.4 Limitations
+
+The smoke test simulates a Discord message event. It does not connect to Discord, verify a live bot login, or test actual slash-command interactions. It also does not contact Ollama or verify AI summary generation.
+
+These areas could be covered by additional integration tests.
+
 
 ## 9. CI/CD
 
