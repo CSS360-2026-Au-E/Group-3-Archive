@@ -346,15 +346,29 @@ These areas could be covered by additional integration tests.
 
 ## 9. CI/CD
 
-This PR did not add a GitHub Actions workflow, but it did establish the automated checks the project should keep in CI going forward.
+The GitHub Actions workflow at `.github/workflows/build-and-deploy.yml` provides
+continuous integration and Docker image delivery for the bot.
 
-The latest changes added property-based fuzz tests for `safeName()` and smoke tests covering message logging, log retrieval, date filtering, and log clearing. Those checks were validated locally in the branch before merge:
+### Validation
 
-- `npm test` — 5 passing, 0 failing
-- `npm run build` — succeeded
+Pull requests targeting `main` or `release` install dependencies with Node.js 22,
+build the application, and build the Docker image without publishing it. Pushes
+to these branches, version tags matching `v*`, and manually started workflow
+runs use the same validation before image delivery.
 
-This means the repository now has concrete test coverage and build validation to support a future CI pipeline, but the actual continuous integration workflow still needs to be configured in GitHub Actions.
+### Container delivery
 
+After validation succeeds, the workflow publishes the Docker image to GitHub
+Container Registry (GHCR). Branch and version references receive corresponding
+image tags, and the repository's default branch also receives `latest`. The
+workflow authenticates with the automatically provided `GITHUB_TOKEN` and
+requires the repository or organization to allow GitHub Actions to write
+packages. Pull requests never publish images.
+
+The workflow delivers an image but does not deploy it to a running host. A
+hosting service must be configured separately to pull the published image.
+Deployment setup and container run instructions are documented in
+[DEPLOYMENT.md](./DEPLOYMENT.md).
 ---
 
 ## User stories from this report
