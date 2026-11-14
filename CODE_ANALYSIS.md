@@ -4,7 +4,78 @@ CSS 360 – Software Engineering | Group 3 – Archive | Autumn 2026
 
 ## 1. Technical debt and code smells
 
-_To be filled in by the owner._
+Owner: Enkhjin
+
+### 1.1 Scope and method
+
+I reviewed the production source, package scripts, repository structure,
+documentation, and automated checks on `main` at commit `3ab5df2`. I looked for
+code that is difficult to change safely, duplicated or obsolete code, build
+steps that depend on a developer's environment, and gaps that are not detected
+automatically. I also ran the existing tests and build from Windows PowerShell
+to distinguish potential smells from problems that can be reproduced.
+
+Baseline results before making changes:
+
+- `npm test`: **5 passing, 0 failing**.
+- `npm run build`: **failed on Windows** because the script invoked the Unix
+  command `rm -rf`, which is not available in npm's default Windows shell.
+- The same build passed in GitHub Actions because the workflow runs on
+  `ubuntu-latest`, where `rm` is available.
+
+### 1.2 Findings
+
+| ID | Priority | Technical debt or code smell | Evidence | Impact |
+|---|---|---|---|---|
+| #1 Technical debt | High | The build command was platform-dependent. | `package.json` used `rm -rf build && esbuild ...`. It passed in Linux CI but failed in Windows PowerShell. | Windows contributors could not use the documented `npm start` path because `start` always runs the build first. A green Linux check therefore did not guarantee that every teammate could build the bot. |
+| #2 Process debt | High | Static analysis is not part of the project checks. | There is no committed ESLint configuration, `lint` script, or lint step in CI. | Unused imports, accidental globals, inconsistent module handling, and similar mistakes can be merged without an automated warning. |
+| #3 Code smell | Medium | Two modules have many reasons to change. | `src/ollama/summarizer.js` is 597 lines and handles log parsing, filtering, chunking, prompt construction, HTTP calls, validation, orchestration, and Discord embed formatting. `src/slashCommands.js` is 293 lines and contains command definitions, permission/channel selection, log presentation, deletion, summary locking, and interaction dispatch. | A change to one responsibility requires editing and retesting a large module that also contains unrelated behavior. This increases review effort and the chance of regressions. |
+| #4 Code smell and debt | Medium | A complete obsolete application is stored beside the current one. | `old_code/` contains 30 files (about 74 KB), including previous commands, events, services, tests, documentation, and its own `package.json`. | Searches return both current and obsolete implementations, and a contributor can review or modify the wrong file. Git history already preserves old versions. |
+| #5 Documentation debt | Medium | The main project documentation is unfinished. | The root `README.md` contains only `**TBD**`. | New contributors do not have one source for navigating and contributing to the codebase. |
+### 1.3 Debt addressed in this task
+
+I fixed TD1 by replacing the shell-specific build command with `node build.js`.
+The Node script removes the old output with `fs.rmSync()`, recursively discovers
+the JavaScript files under `src/`, and invokes esbuild with the same output
+structure as before. Node's filesystem API works on both Windows and Linux, so
+the local build and CI now use the same command without requiring Git Bash, WSL,
+or another Unix-compatible shell.
+
+Verification after the change:
+
+- `npm run build`: **passes on Windows**.
+- `npm test`: **5 passing, 0 failing**.
+
+### 1.4 Recommendations
+
+1. Add ESLint with explicit configuration for the project's CommonJS and
+   ES-module files, add `npm run lint`, and run it in CI.
+2. Split `summarizer.js` incrementally into a log parser/chunker, Ollama client,
+   summary pipeline, and Discord embed formatter. Preserve its public API while
+   adding focused tests before moving behavior.
+3. Separate slash-command definitions from their handlers and interaction
+   router so command registration does not import all runtime behavior.
+4. Remove `old_code/` from the active tree after checking that no documentation
+   or script references it. Use Git history or a release tag for archival access.
+5. Restore a current README covering installation, required configuration,
+   commands, testing, local Ollama setup, and deployment.
+
+### 1.5 Limitations
+
+File length alone does not prove poor design; TD3 is based on the number of
+separate responsibilities and reasons for change inside each file. This review
+also does not replace coverage, complexity, or security analysis, which are
+handled in other sections of this report. The build was verified on Windows and
+the existing Linux CI workflow, but not on every supported operating system.
+
+### 1.6 User stories
+
+The following user stories were created from the findings in this section:
+
+- [Task #5 Emma: Make the build command work across platforms](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59)
+  — addresses TD1 and is resolved by this pull request.
+- [Task #5 Emma: Separate the summary pipeline into focused modules](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60)
+  — addresses TD3 and is planned for a future development iteration.
 
 ## 2. Cyclomatic complexity
 
@@ -363,3 +434,5 @@ This means the repository now has concrete test coverage and build validation to
 |---|---|---|---|---|---|
 | [Task #5 Noah: Separate channel logs by ID](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) | Threat I1, coupling C6 | Noah | Medium | Next bot version | [#45](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/45) |
 | [Task #5 Noah: Remove deleted messages from logs](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) | Threat R2 | Noah | Medium | Next bot version | [#46](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/46) |
+| [Task #5 Emma: Make the build command work across platforms](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) | Technical debt TD1 | Emma | High | Current Task 5 pull request | [#59](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/59) |
+| [Task #5 Emma: Separate the summary pipeline into focused modules](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60) | Code smell TD3 | Emma | Medium | Future development iteration | [#60](https://github.com/CSS360-2026-Au-E/Group-3-Archive/issues/60) |
