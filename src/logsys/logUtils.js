@@ -4,9 +4,27 @@
 
 // Replace characters that aren't allowed in file or folder names
 // (\p{Cc} = any control character; needs the "u" flag)
+
 function safeName(name) {
-  return String(name || "unknown").replace(/[<>:"/\\|?*]|\p{Cc}/gu, "_").trim() || "unknown";
+  let value;
+
+  try {
+    value = String(name || "unknown");
+  } catch {
+    return "unknown";
+  }
+
+  const cleaned = value
+    .replace(/[<>:"/\\|?*]|\p{Cc}/gu, "_")
+    .trim();
+
+  if (!cleaned || cleaned === "." || cleaned === "..") {
+    return "unknown";
+  }
+
+  return cleaned;
 }
+
 
 // YYYY-MM-DD in the machine's local time zone
 function dateStamp(d) {

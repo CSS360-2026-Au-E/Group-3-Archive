@@ -5,7 +5,7 @@
   "scripts": {
     "build": "rm -rf build && esbuild src/*.js src/**/*.js --platform=node --format=cjs  --outdir=build --outbase=src",
     "start": "npm run build && node -r dotenv/config build/bot.js",
-	"deploy": "node src/deploy-commands.js",
+    "deploy": "node src/deploy-commands.js",
     "dev": "nodemon",
     "prod": "node build/bot.js",
     "test": "mocha -r esbuild-runner/register ./tests/*.spec.js --exit"
@@ -28,6 +28,7 @@
     "dotenv": "^16.0.2",
     "esbuild": "^0.15.9",
     "esbuild-runner": "^2.2.1",
+    "fast-check": "^4.10.2",
     "mocha": "^10.0.0",
     "nodemon": "^2.0.20"
   }
