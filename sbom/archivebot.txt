@@ -1,0 +1,52 @@
+NAME                         VERSION                             TYPE                           
+@discordjs/builders          1.2.0                               npm            [38;2;119;119;119m[0m                [0m
+@discordjs/collection        1.1.0                               npm            [38;2;119;119;119m[0m                [0m
+@discordjs/rest              1.2.0                               npm            [38;2;119;119;119m[0m                [0m
+@sapphire/async-queue        1.5.0                               npm            [38;2;119;119;119m[0m                [0m
+@sapphire/shapeshift         3.6.0                               npm            [38;2;119;119;119m[0m                [0m
+@sapphire/snowflake          3.2.2                               npm            [38;2;119;119;119m[0m                [0m
+@tokenizer/token             0.3.0                               npm            [38;2;119;119;119m[0m                [0m
+@types/node                  18.7.23                             npm            [38;2;119;119;119m[0m                [0m
+@types/ws                    8.5.3                               npm            [38;2;119;119;119m[0m                [0m
+actions/checkout             v1                                  github-action  [38;2;119;119;119m[0m                [0m
+actions/checkout             v4                                  github-action  [38;2;119;119;119m[0m                [0m
+actions/setup-node           v1                                  github-action  [38;2;119;119;119m[0m                [0m
+actions/setup-node           v4                                  github-action  [38;2;119;119;119m[0m                [0m
+archivebot                   1.0.0                               npm            [38;2;119;119;119m[0m                [0m
+ascii-table                  0.0.9                               npm            [38;2;119;119;119m[0m                [0m
+asynckit                     0.4.0                               npm            [38;2;119;119;119m[0m                [0m
+axios                        0.27.2                              npm            [38;2;119;119;119m[0m                [0m
+combined-stream              1.0.8                               npm            [38;2;119;119;119m[0m                [0m
+delayed-stream               1.0.0                               npm            [38;2;119;119;119m[0m                [0m
+discord-api-types            0.37.11                             npm            [38;2;119;119;119m[0m                [0m
+discord.js                   14.5.0                              npm            [38;2;119;119;119m[0m                [0m
+docker/build-push-action     v6                                  github-action  [38;2;119;119;119m[0m                [0m
+docker/login-action          v3                                  github-action  [38;2;119;119;119m[0m                [0m
+docker/metadata-action       v5                                  github-action  [38;2;119;119;119m[0m                [0m
+docker/setup-buildx-action   v3                                  github-action  [38;2;119;119;119m[0m                [0m
+fast-deep-equal              3.1.3                               npm            [38;2;119;119;119m[0m                [0m
+file-type                    18.0.0                              npm            [38;2;119;119;119m[0m                [0m
+follow-redirects             1.15.2                              npm            [38;2;119;119;119m[0m                [0m
+form-data                    4.0.0                               npm            [38;2;119;119;119m[0m                [0m
+github.com/evanw/esbuild     v0.0.0-20220922194556-085265a2660f  go-module      [38;2;119;119;119m(+1 duplicate)[0m  [0m
+golang.org/x/sys             v0.0.0-20220715151400-c0bba94af5f8  go-module      [38;2;119;119;119m(+1 duplicate)[0m  [0m
+ieee754                      1.2.1                               npm            [38;2;119;119;119m[0m                [0m
+inherits                     2.0.4                               npm            [38;2;119;119;119m[0m                [0m
+lodash.snakecase             4.1.1                               npm            [38;2;119;119;119m[0m                [0m
+lodash.uniqwith              4.5.0                               npm            [38;2;119;119;119m[0m                [0m
+mime-db                      1.52.0                              npm            [38;2;119;119;119m[0m                [0m
+mime-types                   2.1.35                              npm            [38;2;119;119;119m[0m                [0m
+peek-readable                5.0.0                               npm            [38;2;119;119;119m[0m                [0m
+readable-stream              3.6.0                               npm            [38;2;119;119;119m[0m                [0m
+readable-web-to-node-stream  3.0.2                               npm            [38;2;119;119;119m[0m                [0m
+safe-buffer                  5.2.1                               npm            [38;2;119;119;119m[0m                [0m
+stdlib                       go1.19.1                            go-module      [38;2;119;119;119m(+1 duplicate)[0m  [0m
+string_decoder               1.3.0                               npm            [38;2;119;119;119m[0m                [0m
+strtok3                      7.0.0                               npm            [38;2;119;119;119m[0m                [0m
+token-types                  5.0.1                               npm            [38;2;119;119;119m[0m                [0m
+ts-mixer                     6.0.1                               npm            [38;2;119;119;119m[0m                [0m
+tslib                        2.4.0                               npm            [38;2;119;119;119m[0m                [0m
+undici                       5.10.0                              npm            [38;2;119;119;119m[0m                [0m
+util-deprecate               1.0.2                               npm            [38;2;119;119;119m[0m                [0m
+windows-kill                 UNKNOWN                             binary         [38;2;119;119;119m[0m                [0m
+ws                           8.9.0                               npm            [38;2;119;119;119m[0m                [0m
