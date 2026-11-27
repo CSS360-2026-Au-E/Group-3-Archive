@@ -118,7 +118,9 @@ function chatUrl() {
 //                 0.2 keeps summaries close to what was actually said.
 async function chat(messages, { json = false, temperature = 0.2 } = {}) {
   const model = process.env.OLLAMA_MODEL;
-  if (!model) throw new SummaryError("OLLAMA_MODEL is not set in .env.");
+  if (!model) {
+    throw new SummaryError("The summary service is not configured. An administrator needs to set OLLAMA_MODEL.");
+  }
 
   let res;
   try {
@@ -135,9 +137,13 @@ async function chat(messages, { json = false, temperature = 0.2 } = {}) {
     );
   } catch (err) {
     // Turn common network failures into messages a Discord user can act on
-    if (err.code === "ECONNREFUSED") throw new SummaryError(`Can't reach Ollama at ${chatUrl()}. Is it running?`);
+    if (err.code === "ECONNREFUSED") {
+      throw new SummaryError("The summary service is unavailable. Ollama is not responding.");
+    }
     if (err.code === "ECONNABORTED") throw new SummaryError("The model took too long to respond.");
-    if (err.response) throw new SummaryError(`Ollama returned ${err.response.status}. Check OLLAMA_MODEL is pulled.`);
+    if (err.response) {
+      throw new SummaryError(`The summary service returned an error (${err.response.status}). Check that the configured model is available.`);
+    }
     throw err; // anything else is unexpected - let it bubble up and get logged
   }
 

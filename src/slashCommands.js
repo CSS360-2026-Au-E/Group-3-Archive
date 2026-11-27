@@ -28,6 +28,7 @@ const { summarizeLog, summarizeRange, summaryToEmbed, SummaryError } = require("
 
 const CHAT_LIMIT = 1800; // print in chat below this many characters, attach above
 const UPLOAD_LIMIT = 10 * 1024 * 1024; // Discord's default upload limit (10 MB)
+const SUMMARY_LOCK_TTL_MS = 10 * 60 * 1000;
 
 // Channel types that have text chat
 const TEXT_CHANNEL_TYPES = [
@@ -185,8 +186,9 @@ async function handleClearLog(interaction, store) {
     const log = await store.getLog({ guild: interaction.guild, channel, date });
     if (!log) return interaction.editReply(`No messages logged in #${channel.name} on ${store.parseDate(date)}.`);
     return interaction.editReply(
-      `This would permanently delete **${log.count}** logged message(s) from #${log.channelName} on ${log.date}.\n` +
-        `Run the command again with **confirm: True** to do it.`
+      `⚠️ **Preview deletion**\n` +
+        `This would permanently delete **${log.count}** logged message(s) from #${log.channelName} on ${log.date}.\n` +
+        `This cannot be undone. Run the command again with **confirm: True** to continue.`
     );
   }
 
@@ -204,8 +206,25 @@ async function handleClearLog(interaction, store) {
   );
 }
 
-// Only one summary at a time, so a local model isn't overloaded by parallel requests
-let summaryRunning = false;
+// One summary per channel/date request, so unrelated channels can still summarize.
+const summaryLocks = new Map();
+
+function getSummaryLockKey(interaction) {
+  const date = interaction.options.getString("date");
+  const to = interaction.options.getString("to") || "";
+  return `${interaction.guildId}:${interaction.channelId}:${date}:${to}`;
+}
+
+function acquireSummaryLock(key) {
+  const current = summaryLocks.get(key);
+  if (current && Date.now() - current.startedAt < SUMMARY_LOCK_TTL_MS) return false;
+  summaryLocks.set(key, { startedAt: Date.now() });
+  return true;
+}
+
+function releaseSummaryLock(key) {
+  summaryLocks.delete(key);
+}
 
 async function handleSummary(interaction, store) {
   const channel = pickChannel(interaction);
@@ -214,10 +233,10 @@ async function handleSummary(interaction, store) {
   const logs = await readRequestedLogs(interaction, store, channel);
   if (logs.empty) return interaction.editReply(logs.empty);
 
-  if (summaryRunning) {
+  const lockKey = getSummaryLockKey(interaction);
+  if (!acquireSummaryLock(lockKey)) {
     return interaction.editReply("Another summary is in progress. Try again in a minute.");
   }
-  summaryRunning = true;
 
   try {
     await interaction.editReply(`Summarizing ${logs.count} message(s) from #${logs.channelName} ${logs.when}…`);
@@ -245,11 +264,8 @@ async function handleSummary(interaction, store) {
 
     const embed = new EmbedBuilder(summaryToEmbed(summary, { channelName: logs.channelName, date: logs.period }));
     return interaction.editReply({ content: "", embeds: [embed], allowedMentions: { parse: [] } });
-  } catch (err) {
-    if (err instanceof SummaryError) return interaction.editReply(`Couldn't summarize: ${err.message}`);
-    throw err;
   } finally {
-    summaryRunning = false;
+    releaseSummaryLock(lockKey);
   }
 }
 
@@ -260,11 +276,67 @@ const handlers = {
   summary: handleSummary,
 };
 
+function formatSlashError(err, commandName) {
+  if (err instanceof LogInputError) return err.message;
+
+  if (err instanceof SummaryError) {
+    if (/unavailable|reach Ollama|ECONN/i.test(err.message)) {
+      return "⚠️ **The summary service is unavailable**\nThe local model is not responding. Try again in a minute.";
+    }
+    if (/too long|timed out/i.test(err.message)) {
+      return "⚠️ **The summary timed out**\nTry a shorter date range or try again in a minute.";
+    }
+    if (/unreadable|invalid|JSON/i.test(err.message)) {
+      return "⚠️ **The model returned an unreadable result**\nThe bot could not safely use it. Try again.";
+    }
+    return "⚠️ **Couldn't summarize**\nThe summary service could not complete this request. Try again or contact an administrator.";
+  }
+
+  if (err?.code === "ENOENT") {
+    return "⚠️ **Logs could not be found**\nNo saved log file was available, or it has moved. Ask an administrator to check the log storage.";
+  }
+  if (err?.code === "EACCES" || err?.code === "EPERM") {
+    return "⚠️ **Log access was denied**\nThe bot cannot read or update the log files. An administrator needs to check file permissions.";
+  }
+  if (err?.code === "ENOSPC") {
+    return "⚠️ **Log storage is full**\nAn administrator needs to free storage before logs can be updated.";
+  }
+  if (err?.code === 10062 || /Unknown interaction/i.test(err?.message || "")) {
+    return null;
+  }
+  if (err?.code === 50013 || /Missing Permissions/i.test(err?.message || "")) {
+    return "⚠️ **Discord permission denied**\nThe bot needs permission to view this channel or send attachments.";
+  }
+
+  return "⚠️ **Something went wrong**\nThe request could not be completed. Please try again. If it continues, contact an administrator.";
+}
+
+async function sendCommandError(interaction, message) {
+  if (!message) return;
+  try {
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply(message);
+    } else {
+      await interaction.reply({ content: message, ephemeral: true });
+    }
+  } catch (err) {
+    console.error(`[slash] Failed to send error response for /${interaction.commandName}:`, err);
+  }
+}
+
 function registerSlashCommands(client, store) {
   client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isChatInputCommand() || !interaction.inGuild()) return;
+    if (!interaction.isChatInputCommand()) return;
+    console.info(`[slash] Received /${interaction.commandName}`);
+    if (!interaction.inGuild()) {
+      console.warn(`[slash] Ignoring /${interaction.commandName}: interaction is not in a server`);
+      return;
+    }
     const handler = handlers[interaction.commandName];
-    if (!handler) return;
+    if (!handler) {
+      console.warn(`[slash] No handler registered for /${interaction.commandName}`);
+      return;
+    }
 
     try {
       // Reply privately (only the requester sees it) and buy time past Discord's 3-second limit
@@ -272,13 +344,8 @@ function registerSlashCommands(client, store) {
 	  // Register commands defined here
       await handler(interaction, store);
     } catch (err) {
-      const msg = err instanceof LogInputError ? err.message : "Something went wrong.";
-      if (!(err instanceof LogInputError)) console.error(`/${interaction.commandName} failed:`, err);
-      if (interaction.deferred || interaction.replied) {
-        await interaction.editReply(msg).catch(() => {});
-      } else {
-        await interaction.reply({ content: msg, ephemeral: true }).catch(() => {});
-      }
+      console.error(`[slash] /${interaction.commandName} failed:`, err);
+      await sendCommandError(interaction, formatSlashError(err, interaction.commandName));
     }
   });
 
@@ -289,4 +356,5 @@ function registerSlashCommands(client, store) {
 module.exports = {
   commands: [logCommand, clearLogCommand, summaryCommand],
   registerSlashCommands,
+  formatSlashError,
 };
