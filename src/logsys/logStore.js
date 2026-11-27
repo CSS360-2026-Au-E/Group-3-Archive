@@ -13,12 +13,21 @@
 //   const result = await store.clearLog({ guild, channel, date: "yesterday" });
 //   console.log(result.removed);
 //
+//   const dates = await store.listDates({ guild, channel });   // every logged day, oldest first
+//   const found = await store.searchLogs({ channels: [general, dev], guild, topic: "ollama" });
+//   for (const day of found.dates) console.log(day.date, day.hits);
+//
 // Channels can be given as names (guildName / channelName) or as discord.js
 // objects (guild / channel). Dates can be "YYYY-MM-DD", "today", "yesterday", or a Date.
 
 const fs = require("fs");
 const path = require("path");
 const { safeName, parseDate, getDateRange, DateRangeError } = require("./logUtils");
+
+const { topicRegex, searchText } = require("./logSearch");
+
+// Log files are named YYYY-MM-DD.txt
+const DATE_FILE = /^(\d{4}-\d{2}-\d{2})\.txt$/;
 
 // Count messages in a log (each message starts with "[timestamp]")
 function countMessages(text) {
@@ -178,7 +187,89 @@ module.exports = function createLogStore(options = {}) {
     return result;
   }
 
-  return { getLog, getLogRange, clearLog, parseDate };
+  /**
+   * Every date that has a log file for this channel, oldest first, as "YYYY-MM-DD".
+   * Takes { guild, channel } or { guildName, channelName }. Returns [] if nothing is logged.
+   */
+  async function listDates({ guild, channel, guildName, channelName }) {
+    const g = guildName ?? guild?.name;
+    const c = channelName ?? channel?.name;
+    if (!g || !c) throw new LogInputError("A guild and channel (or guildName and channelName) are required.");
+
+    // With one shared file per day, every channel's dates live in logDir itself;
+    // getLog() then picks out this channel's lines
+    const dir = splitByChannel ? path.join(logDir, safeName(g), safeName(c)) : logDir;
+    let names;
+    try {
+      names = await fs.promises.readdir(dir);
+    } catch (err) {
+      if (err.code === "ENOENT") return [];
+      throw err;
+    }
+    // "YYYY-MM-DD" strings sort in date order
+    return names.map((n) => DATE_FILE.exec(n)?.[1]).filter((d) => d && parseDate(d)).sort();
+  }
+
+  /**
+   * Find every logged day, in any of the given channels, where the topic was mentioned.
+   * Unlike getLogRange() there's no 7-day limit: this searches all saved logs.
+   * Bot messages are ignored (see logSearch.js).
+   *
+   *   searchLogs({ guild, channels: [channelA, channelB], topic: "ollama" })
+   *   (or channelNames: ["general", "dev"] with guildName)
+   *
+   * Returns:
+   *   {
+   *     topic,
+   *     channelsSearched,  number of channels looked at
+   *     daysSearched,      number of channel-day log files read
+   *     totalHits,         matching messages across everything
+   *     dates: [           days with at least one match, NEWEST first
+   *       { date, hits, channels: [{ channelName, hits, sample: { author, text } }] }   most hits first
+   *     ]
+   *   }
+   * Throws LogInputError if the topic is empty.
+   */
+  async function searchLogs({ guild, guildName, channels = [], channelNames = [], topic }) {
+    const regex = topicRegex(topic);
+    if (!regex) throw new LogInputError("Enter a topic to search for.");
+    const g = guildName ?? guild?.name;
+
+    const targets = [...channels.map((ch) => ch?.name), ...channelNames].filter(Boolean);
+    const byDate = new Map();
+    const seen = new Set();
+    let daysSearched = 0;
+    let totalHits = 0;
+
+    for (const c of targets) {
+      // Two channels with the same name share a log folder - only read it once
+      const key = safeName(c);
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      for (const date of await listDates({ guildName: g, channelName: c })) {
+        const log = await getLog({ guildName: g, channelName: c, date });
+        if (!log) continue;
+        daysSearched++;
+
+        const found = searchText(log.text, regex);
+        if (!found) continue;
+        totalHits += found.hits;
+
+        if (!byDate.has(date)) byDate.set(date, { date, hits: 0, channels: [] });
+        const day = byDate.get(date);
+        day.hits += found.hits;
+        day.channels.push({ channelName: log.channelName, hits: found.hits, sample: found.sample });
+      }
+    }
+
+    const dates = [...byDate.values()].sort((a, b) => (a.date < b.date ? 1 : -1));
+    for (const day of dates) day.channels.sort((a, b) => b.hits - a.hits);
+
+    return { topic: String(topic).trim(), channelsSearched: seen.size, daysSearched, totalHits, dates };
+  }
+
+  return { getLog, getLogRange, clearLog, listDates, searchLogs, parseDate };
 };
 
 module.exports.LogInputError = LogInputError;
