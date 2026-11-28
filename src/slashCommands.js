@@ -22,10 +22,11 @@ const {
   ChannelType,
   AttachmentBuilder,
   EmbedBuilder,
+  escapeMarkdown,
 } = require("discord.js");
 const { LogInputError } = require("./logsys/logStore");
 const { MAX_RANGE_DAYS } = require("./logsys/logUtils");
-const { summarizeLog, summarizeRange, summaryToEmbed, escapeMarkdown, SummaryError } = require("./ollama/summarizer");
+const { summarizeLog, summarizeRange, summaryToEmbed, SummaryError } = require("./ollama/summarizer");
 
 const CHAT_LIMIT = 1800; // print in chat below this many characters, attach above
 const UPLOAD_LIMIT = 10 * 1024 * 1024; // Discord's default upload limit (10 MB)
