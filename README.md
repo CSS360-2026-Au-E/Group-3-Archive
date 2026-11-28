@@ -12,6 +12,8 @@ configure.
 - `/log` displays the saved log for one date or a date range of up to seven
   days.
 - `/summary` summarizes a saved log for one date or a date range using Ollama.
+- `/find` lists every date a word or phrase was mentioned, across all channels
+  you can see or in one channel.
 - `/clearlog` previews log deletion and requires explicit confirmation before
   deleting a day's log.
 - Greets new members in an available text channel.
@@ -89,12 +91,17 @@ Do not commit `.env` or share your bot token. The repository ignores `.env` and
 | --- | --- | --- |
 | `/log` | Required `date`; optional `to` and `channel` | Members with **Manage Messages** |
 | `/summary` | Required `date`; optional `to` and `channel` | Members with **Manage Messages** |
+| `/find` | Required `topic`; optional `channel` | Members with **Manage Messages** |
 | `/clearlog` | Required `date`; optional `channel` and `confirm` | Members with **Manage Server** |
 
 Dates can be `YYYY-MM-DD`, `today`, or `yesterday`. For `/log` and `/summary`,
 provide `to` to select an inclusive range of up to seven days. If `channel` is
 omitted, the command uses the channel where it was run. `/clearlog` affects one
 date only; without `confirm: True`, it previews the deletion.
+`/find` searches all saved logs, not just seven days. Matching ignores case and
+looks for whole words or phrases, so `log` does not match `blog`. Bot messages
+are skipped. Results show the newest 15 matching dates, with message counts per
+channel and a sample message.
 
 ## Development and tests
 

@@ -5,6 +5,7 @@
 //   /log      date [to] [channel]           one day, or a range of up to 7 days
 //   /clearlog date [channel] [confirm]      one day only
 //   /summary  date [to] [channel]           one day, or a range of up to 7 days
+//   /find     topic [channel]               every date a topic came up (all channels by default)
 //
 // Usage (in bot.js):
 //   import createLogStore from "./logsys/logStore.js";
@@ -21,6 +22,7 @@ const {
   ChannelType,
   AttachmentBuilder,
   EmbedBuilder,
+  escapeMarkdown,
 } = require("discord.js");
 const { LogInputError } = require("./logsys/logStore");
 const { MAX_RANGE_DAYS } = require("./logsys/logUtils");
@@ -89,6 +91,26 @@ const summaryCommand = new SlashCommandBuilder()
       .addChannelTypes(...TEXT_CHANNEL_TYPES)
   )
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages) // same as /log: it reveals log content
+  .setDMPermission(false);
+
+const findCommand = new SlashCommandBuilder()
+  .setName("find")
+  .setDescription("List the dates a topic was talked about in the saved logs")
+  .addStringOption((o) =>
+    o
+      .setName("topic")
+      .setDescription("Word or phrase to look for (not case-sensitive)")
+      .setRequired(true)
+      .setMinLength(2)
+      .setMaxLength(100)
+  )
+  .addChannelOption((o) =>
+    o
+      .setName("channel")
+      .setDescription("Only search this channel (defaults to every channel you can see)")
+      .addChannelTypes(...TEXT_CHANNEL_TYPES)
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages) // same as /log: sample lines reveal log content
   .setDMPermission(false);
 
 // ---------- Handlers (call logStore, then reply) ----------
@@ -253,11 +275,76 @@ async function handleSummary(interaction, store) {
   }
 }
 
+// Most dates listed in one /find reply (an embed description holds 4096 characters)
+const FIND_MAX_DATES = 15;
+
+// Every text channel in the server the user can see. Private threads are left
+// out, since seeing the parent channel doesn't mean you're in the thread.
+function visibleChannels(interaction) {
+  return [...interaction.guild.channels.cache.values()].filter(
+    (ch) =>
+      TEXT_CHANNEL_TYPES.includes(ch.type) &&
+      ch.type !== ChannelType.PrivateThread &&
+      ch.permissionsFor?.(interaction.member)?.has(PermissionFlagsBits.ViewChannel)
+  );
+}
+
+async function handleFind(interaction, store) {
+  const topic = interaction.options.getString("topic");
+
+  // One channel if picked, otherwise the whole server (only channels this user can see)
+  let channels;
+  if (interaction.options.getChannel("channel")) {
+    const channel = pickChannel(interaction);
+    if (!channel) return interaction.editReply("Channel not found.");
+    channels = [channel];
+  } else {
+    channels = visibleChannels(interaction);
+  }
+
+  const result = await store.searchLogs({ guild: interaction.guild, channels, topic });
+  const shownTopic = escapeMarkdown(result.topic);
+  const scope = channels.length === 1 ? `#${channels[0].name}` : `${result.channelsSearched} channel(s)`;
+
+  if (!result.dates.length) {
+    return interaction.editReply(
+      `No messages mention "${shownTopic}" in ${scope} (searched ${result.daysSearched} day(s) of logs).`
+    );
+  }
+
+  // One entry per date, newest first:
+  //   **2026-11-05** · 3 message(s) · #general (2), #dev (1)
+  //   > noah: ollama timed out
+  const entries = result.dates.slice(0, FIND_MAX_DATES).map((day) => {
+    const where = day.channels.map((c) => `#${c.channelName} (${c.hits})`).join(", ");
+    const { author, text } = day.channels[0].sample;
+    return `**${day.date}** · ${day.hits} message(s) · ${where}\n> ${escapeMarkdown(author)}: ${escapeMarkdown(text)}`;
+  });
+
+  // Drop entries from the end if a lot of channels made it too long for one embed
+  let description = entries.join("\n\n");
+  while (description.length > 4000 && entries.length > 1) {
+    entries.pop();
+    description = entries.join("\n\n");
+  }
+
+  const shown = entries.length < result.dates.length ? ` · showing the newest ${entries.length}` : "";
+  const embed = new EmbedBuilder()
+    .setTitle(`"${result.topic}" came up on ${result.dates.length} day(s)`.slice(0, 256))
+    .setDescription(description)
+    .setFooter({
+      text: `${result.totalHits} message(s) in ${scope}, ${result.daysSearched} day(s) of logs searched${shown}. Use /log or /summary on a date for details.`,
+    });
+
+  return interaction.editReply({ embeds: [embed], allowedMentions: { parse: [] } });
+}
+
 // Command name -> handler
 const handlers = {
   log: handleLog,
   clearlog: handleClearLog,
   summary: handleSummary,
+  find: handleFind,
 };
 
 function registerSlashCommands(client, store) {
@@ -287,6 +374,6 @@ function registerSlashCommands(client, store) {
 
 // Definitions are exported for deploy-commands.js
 module.exports = {
-  commands: [logCommand, clearLogCommand, summaryCommand],
+  commands: [logCommand, clearLogCommand, summaryCommand, findCommand],
   registerSlashCommands,
 };
